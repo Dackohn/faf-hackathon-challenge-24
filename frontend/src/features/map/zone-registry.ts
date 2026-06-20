@@ -67,7 +67,7 @@ export const ZONE_REGISTRY: Record<ZoneId, ZoneDefinition> = {
     adminDescription:
       "Observe beach activity capacity, booking, and cancellation events.",
     icon: IconUmbrella,
-    channel: ChannelId.Hotel,
+    channel: ChannelId.Beach,
     position: { x: 580, y: 1400 },
     accent: "#fbbf24",
     markerSrc: beachZoneArt,
@@ -89,7 +89,7 @@ export const ZONE_REGISTRY: Record<ZoneId, ZoneDefinition> = {
   },
   [ZoneId.Broadcast]: {
     id: ZoneId.Broadcast,
-    label: "Lighhouse",
+    label: "Lighthouse",
     description: "Resort-wide announcements broadcast to every guest on the island.",
     adminDescription:
       "Observe the full island-wide event stream from every service.",
