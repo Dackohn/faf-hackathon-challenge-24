@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from openai import AsyncOpenAI
 from config import settings
 from profanity import mask_profanity
+from pii import make_pseudonymizer, Pseudonymizer, StreamRestorer
 from tools import TOOL_SCHEMAS, GUEST_TOOL_SCHEMAS, execute_tool
 from tracing import request_id_ctx
 
@@ -87,15 +88,25 @@ def _assemble(
     guest_id: str | None,
     context: str,
     history: list[dict] | None,
+    pseudo: Pseudonymizer | None,
 ) -> tuple[list[dict], list[dict]]:
-    """Build the LLM message list and the list of new messages to persist."""
+    """Build the LLM message list and the list of new messages to persist.
+
+    With a pseudonymizer, the guest's profile is injected as placeholders only and any
+    PII the guest typed into their message is redacted, so no personal data leaves the
+    system. History arrives already pseudonymized (it is persisted in placeholder form)."""
     system_prompt = SYSTEM_PROMPT_BASE
     if context:
         system_prompt += f"\n## Resort Context\n{context}\n"
     if guest_id:
         system_prompt += f"\nThe current guest's ID is: {guest_id}\n"
+    if pseudo:
+        system_prompt += "\n" + pseudo.profile_block()
 
-    user_msg = {"role": "user", "content": mask_profanity(message)}
+    content = mask_profanity(message)
+    if pseudo:
+        content = pseudo.redact_message(content)
+    user_msg = {"role": "user", "content": content}
     messages = [{"role": "system", "content": system_prompt}]
     if history:
         messages.extend(history)
@@ -111,11 +122,12 @@ def _normalize_calls(tool_calls) -> list[dict]:
     ]
 
 
-async def _run_one_tool(call: dict, guest_id: str | None) -> dict:
+async def _run_one_tool(call: dict, guest_id: str | None, pseudo: Pseudonymizer | None) -> dict:
     """Execute one normalized tool call and return its tool-result message.
 
     Arg parsing is guarded so a malformed tool-call payload from the model degrades into an
-    empty-args call rather than crashing the request (or the SSE stream)."""
+    empty-args call rather than crashing the request (or the SSE stream). Any guest name in
+    the result is redacted before it is handed back to the model."""
     name = call["name"]
     try:
         arguments = json.loads(call["arguments_str"]) if call["arguments_str"] else {}
@@ -127,6 +139,8 @@ async def _run_one_tool(call: dict, guest_id: str | None) -> dict:
         "rid=%s tool=%s dur_ms=%.1f args=%s -> %s",
         request_id_ctx.get(), name, (time.perf_counter() - t0) * 1000, arguments, result[:200],
     )
+    if pseudo:
+        result = pseudo.redact_data(result)
     return {"role": "tool", "tool_call_id": call["id"], "content": result}
 
 
@@ -140,7 +154,8 @@ async def chat(
     context: str,
     history: list[dict] | None = None,
 ) -> tuple[str, list[dict]]:
-    messages, new_messages = _assemble(message, guest_id, context, history)
+    pseudo = make_pseudonymizer(guest_id)
+    messages, new_messages = _assemble(message, guest_id, context, history, pseudo)
     tools = _build_tools(guest_id)
     client = get_client()
 
@@ -158,14 +173,16 @@ async def chat(
             messages.append(assistant_msg)
             new_messages.append(assistant_msg)
             for call in _normalize_calls(choice.message.tool_calls):
-                tool_msg = await _run_one_tool(call, guest_id)
+                tool_msg = await _run_one_tool(call, guest_id, pseudo)
                 messages.append(tool_msg)
                 new_messages.append(tool_msg)
             continue
 
+        # Persist the placeholder form (PII-free at rest and on replay); restore the
+        # real values only for the answer the guest receives now.
         reply = mask_profanity(choice.message.content or FALLBACK)
         new_messages.append({"role": "assistant", "content": reply})
-        return reply, new_messages
+        return (pseudo.restore(reply) if pseudo else reply), new_messages
 
     new_messages.append({"role": "assistant", "content": FALLBACK})
     return FALLBACK, new_messages
@@ -190,11 +207,12 @@ async def chat_stream(
     History is persisted in `finally`, so an early client disconnect still saves the turn.
     """
     request_id_ctx.set(request_id)
-    messages, new_messages = _assemble(message, guest_id, context, history)
+    pseudo = make_pseudonymizer(guest_id)
+    restorer = StreamRestorer(pseudo) if pseudo else None
+    messages, new_messages = _assemble(message, guest_id, context, history, pseudo)
     tools = _build_tools(guest_id)
     client = get_client()
-    reply = FALLBACK
-    streamed_parts: list[str] = []  # every token delta emitted to the client, across all rounds
+    streamed_parts: list[str] = []  # raw model deltas (placeholder form), across all rounds
 
     try:
         for _ in range(MAX_TOOL_ROUNDS):
@@ -217,7 +235,9 @@ async def chat_stream(
                 if delta.content:
                     content_parts.append(delta.content)
                     streamed_parts.append(delta.content)
-                    yield _sse("token", {"delta": delta.content})
+                    out = restorer.push(delta.content) if restorer else delta.content
+                    if out:
+                        yield _sse("token", {"delta": out})
                 for tc in delta.tool_calls or []:
                     slot = fragments.setdefault(tc.index, {"id": None, "name": None, "args": ""})
                     if tc.id:
@@ -252,7 +272,7 @@ async def chat_stream(
 
                 for call in calls:
                     yield _sse("status", {"type": "tool_call", "name": call["name"]})
-                    tool_msg = await _run_one_tool(call, guest_id)
+                    tool_msg = await _run_one_tool(call, guest_id, pseudo)
                     yield _sse("status", {"type": "tool_result", "name": call["name"]})
                     messages.append(tool_msg)
                     new_messages.append(tool_msg)
@@ -261,8 +281,15 @@ async def chat_stream(
             # No tool calls — the final answer is everything streamed this turn, so the
             # client's concatenated token deltas always equal done.reply (any preamble
             # emitted before a tool call in an earlier round stays part of the reply).
-            reply = mask_profanity("".join(streamed_parts) or FALLBACK)
-            new_messages.append({"role": "assistant", "content": reply})
+            # Flush any placeholder fragment held back so a token was never split.
+            if restorer:
+                tail = restorer.flush()
+                if tail:
+                    yield _sse("token", {"delta": tail})
+            # Persist the placeholder form; restore real values only for guest-facing output.
+            placeholder_reply = mask_profanity("".join(streamed_parts) or FALLBACK)
+            reply = pseudo.restore(placeholder_reply) if pseudo else placeholder_reply
+            new_messages.append({"role": "assistant", "content": placeholder_reply})
             yield _sse("done", {"reply": reply})
             yield "data: [DONE]\n\n"
             return
