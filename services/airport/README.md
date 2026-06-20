@@ -118,6 +118,8 @@ On startup, the gate manager rehydrates in-memory queues from the database. Any 
 | GET    | `/arrivals/:guest_id`         | Get arrival status for a specific guest  |
 | GET    | `/queue`                      | Live gate queue status                   |
 | GET    | `/stats`                      | Aggregate airport statistics             |
+| POST   | `/admin/gates`                | Open (add) a gate at runtime             |
+| DELETE | `/admin/gates/:gate_id`       | Close (remove) a gate at runtime         |
 
 ## API contract
 
@@ -272,6 +274,55 @@ Response 200:
   "current_game_time": 54321.0
 }
 ```
+
+### POST /admin/gates
+
+Opens (adds) a gate at runtime so it immediately starts accepting guests. Capacity can be
+scaled up without redeploying.
+
+Request:
+
+```json
+{ "gate_type": "EU" }
+```
+
+| Field             | Required | Description                                                              |
+| ----------------- | -------- | ------------------------------------------------------------------------ |
+| `gate_type`       | yes\*    | `EU` or `ALL`. \*Optional if `gate_id` is given (inferred from prefix).  |
+| `gate_id`         | no       | Explicit id (e.g. `EU-4`). Defaults to the next free id for the type.    |
+| `processing_time` | no       | Game-seconds per guest. Defaults to the type's configured value.         |
+
+Response 201:
+
+```json
+{ "gate_id": "EU-4", "gate_type": "EU", "processing_time": 300.0, "queue_size": 0 }
+```
+
+Response 400 — `gate_type` not `EU`/`ALL`, or invalid `processing_time`. Response 409 — the
+gate id is already open.
+
+### DELETE /admin/gates/:gate_id
+
+Closes (removes) a gate at runtime. Its waiting guests are re-queued onto the remaining open
+gates that can serve them (keeping their original `queued_at` and priority order); the guest
+currently being processed, if any, is left to finish at the gate. After this, `/queue` and
+`/stats` reflect the new distribution.
+
+Response 200:
+
+```json
+{
+  "closed": "EU-2",
+  "reassigned_count": 2,
+  "reassigned": [
+    { "guest_id": "guest-bob-0042", "gate": "EU-1" },
+    { "guest_id": "guest-ann-0007", "gate": "ALL-1" }
+  ]
+}
+```
+
+Response 404 — gate not found. Response 409 — refused because it is the last gate able to
+serve its guests (e.g. the only remaining `ALL` gate, which non-EU guests depend on).
 
 ## Guest IDs
 

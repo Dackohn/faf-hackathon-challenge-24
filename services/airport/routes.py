@@ -66,6 +66,42 @@ def register_routes(app):
         arrivals = query.order_by(Arrival.queued_at.desc()).all()
         return jsonify({"arrivals": arrivals_schema.dump(arrivals)}), 200
 
+    @app.route("/admin/gates", methods=["POST"])
+    def open_gate():
+        data = request.get_json(silent=True) or {}
+        gate_type = data.get("gate_type")
+        gate_id = data.get("gate_id")
+        processing_time = data.get("processing_time")
+
+        if gate_type is not None:
+            gate_type = str(gate_type).upper()
+
+        if processing_time is not None:
+            try:
+                processing_time = float(processing_time)
+            except (TypeError, ValueError):
+                return jsonify({"error": "processing_time must be a number"}), 400
+            if processing_time <= 0:
+                return jsonify({"error": "processing_time must be > 0"}), 400
+
+        result, error = app.gate_manager.open_gate(
+            gate_type=gate_type, gate_id=gate_id, processing_time=processing_time
+        )
+        if error == "invalid_type":
+            return jsonify({"error": "gate_type must be 'EU' or 'ALL'"}), 400
+        if error == "already_open":
+            return jsonify({"error": f"gate '{gate_id}' is already open"}), 409
+        return jsonify(result), 201
+
+    @app.route("/admin/gates/<gate_id>", methods=["DELETE"])
+    def close_gate(gate_id):
+        result, error = app.gate_manager.close_gate(gate_id)
+        if error == "not_found":
+            return jsonify({"error": "Gate not found"}), 404
+        if error in ("last_gate", "last_all_gate"):
+            return jsonify({"error": "cannot close the last gate able to serve its guests"}), 409
+        return jsonify(result), 200
+
     @app.route("/queue", methods=["GET"])
     def get_queue():
         return jsonify(app.gate_manager.get_all_gates_status()), 200
