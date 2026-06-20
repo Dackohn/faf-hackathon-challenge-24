@@ -1,11 +1,13 @@
 import { api } from "@/lib/api-client";
 import {
   ActivitiesResponseSchema,
+  ActivitiesDetailResponseSchema,
   ActivitySchema,
   ActivityByGuestResponseSchema,
   BookActivityResponseSchema,
   CancelActivityResponseSchema,
   type ActivitiesResponse,
+  type ActivitiesDetailResponse,
   type Activity,
   type ActivityByGuestResponse,
   type BookActivityResponse,
@@ -51,4 +53,12 @@ export function getActivityByGuest(
     ActivityByGuestResponseSchema,
     `/activity/by-guest/${guestId}`
   );
+}
+
+export function getAdminActivitiesDetail(
+  passcode: string
+): Promise<ActivitiesDetailResponse> {
+  return api.beach.get(ActivitiesDetailResponseSchema, "/admin/activities", {
+    "X-Admin-Passcode": passcode,
+  });
 }

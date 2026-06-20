@@ -7,6 +7,7 @@ import com.hackathon.summer.faf.application.usecase.BookActivityUseCase
 import com.hackathon.summer.faf.application.usecase.CancelActivityUseCase
 import com.hackathon.summer.faf.domain.repository.ActivityRepository
 import com.hackathon.summer.faf.presentation.request.VisitorRequest
+import com.hackathon.summer.faf.presentation.response.ActivityDetailResponse
 import com.hackathon.summer.faf.presentation.response.ActivityResponse
 import com.hackathon.summer.faf.presentation.response.ErrorResponse
 import domain.error.ActivityErrors
@@ -21,8 +22,39 @@ import io.ktor.server.routing.*
 class ActivityController(
     private val activityRepository: ActivityRepository,
     private val bookActivityUseCase: BookActivityUseCase,
-    private val cancelActivityUseCase: CancelActivityUseCase
+    private val cancelActivityUseCase: CancelActivityUseCase,
+    private val adminPasscode: String? = null
 ) {
+
+    suspend fun getActivitiesDetail(call: ApplicationCall) {
+        if (!isAdminAuthorized(call)) return
+
+        val activities = activityRepository.findAll()
+        val response = activities.map { activity ->
+            ActivityDetailResponse(
+                activity_id = activity.id,
+                activity_name = activity.name,
+                description = activity.description,
+                capacity = activity.capacity,
+                remaining = activity.remaining(),
+                visitors = activity.bookedVisitors.toList()
+            )
+        }
+        call.respond(HttpStatusCode.OK, mapOf("activities" to response))
+    }
+
+    private suspend fun isAdminAuthorized(call: ApplicationCall): Boolean {
+        if (adminPasscode.isNullOrBlank()) {
+            call.respond(HttpStatusCode.ServiceUnavailable, ErrorResponse("Admin access not configured"))
+            return false
+        }
+        val provided = call.request.headers["X-Admin-Passcode"]
+        if (provided == null || provided != adminPasscode) {
+            call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Unauthorized"))
+            return false
+        }
+        return true
+    }
 
     suspend fun book(call: ApplicationCall) {
 
