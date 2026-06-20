@@ -145,18 +145,20 @@ class GateManager:
         return min(candidates, key=lambda g: len(g.queue))
 
     def assign_and_enqueue(self, guest: dict) -> dict:
-        if guest["passport_type"] == "EU":
-            eu_gate = self._shortest_queue_gate("EU")
-            all_gate = self._shortest_queue_gate("ALL")
-            gate = all_gate if len(all_gate.queue) < len(eu_gate.queue) else eu_gate
-        else:
-            gate = self._shortest_queue_gate("ALL")
-
-        guest["queued_at"] = game_now()
-        guest["status"] = "queued"
-        guest["gate"] = gate.gate_id
-
+        # Select the gate and enqueue under one lock so two concurrent arrivals
+        # cannot both read the same shortest gate and pile onto it (TOCTOU).
         with self.assignment_lock:
+            if guest["passport_type"] == "EU":
+                eu_gate = self._shortest_queue_gate("EU")
+                all_gate = self._shortest_queue_gate("ALL")
+                gate = all_gate if len(all_gate.queue) < len(eu_gate.queue) else eu_gate
+            else:
+                gate = self._shortest_queue_gate("ALL")
+
+            guest["queued_at"] = game_now()
+            guest["status"] = "queued"
+            guest["gate"] = gate.gate_id
+
             with self.app.app_context():
                 arrival = Arrival(
                     guest_id=guest["guest_id"],
@@ -174,8 +176,8 @@ class GateManager:
                 db.session.commit()
                 guest["arrival_id"] = arrival.id
 
-        with gate.lock:
-            position = gate.enqueue(guest)
+            with gate.lock:
+                position = gate.enqueue(guest)
 
         return {
             "guest_id": guest["guest_id"],
