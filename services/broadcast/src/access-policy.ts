@@ -1,4 +1,4 @@
-export const PUBLIC_PREFIXES = ["public.", "announcement."];
+export const PUBLIC_PREFIXES = ["public.", "announcement.", "crowd."];
 
 const SERVICE_POLICY: Record<string, string[]> = {
   airport:  ["airport."],

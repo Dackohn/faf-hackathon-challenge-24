@@ -6,6 +6,7 @@ import {
 } from "@/features/map/constants";
 import { ZoneIndicator } from "@/features/map/components/zone-indicator";
 import { getZone } from "@/features/map/zone-registry";
+import { useCrowdStore } from "@/stores/crowd-store";
 
 interface ZoneLayerProps {
   mapW: number;
@@ -17,6 +18,7 @@ export function ZoneLayer({ mapW, mapH, onZoneClick }: ZoneLayerProps) {
   const scaleX = mapW / MAP_W;
   const scaleY = mapH / MAP_H;
   const scale = Math.min(scaleX, scaleY);
+  const crowdByZone = useCrowdStore((s) => s.byZone);
 
   return (
     <div className="pointer-events-none absolute inset-0">
@@ -33,6 +35,7 @@ export function ZoneLayer({ mapW, mapH, onZoneClick }: ZoneLayerProps) {
             accent={zone.accent}
             markerSrc={zone.markerSrc}
             markerScale={zone.markerScale}
+            crowdLevel={crowdByZone[id]?.level}
             onClick={onZoneClick}
           />
         );

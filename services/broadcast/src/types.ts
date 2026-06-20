@@ -21,6 +21,26 @@ export enum EventType {
   PUBLIC_ANNOUNCEMENT = "public.announcement",
 
   ANNOUNCEMENT_RESORT = "announcement.resort",
+
+  CROWD_UPDATE = "crowd.update",
+}
+
+export type CrowdLevel = "calm" | "moderate" | "busy" | "unknown";
+export type CrowdTrend = "improving" | "steady" | "worsening";
+
+export interface ZoneCrowd {
+  zone: string;
+  level: CrowdLevel;
+  load: number | null;
+  trend: CrowdTrend;
+  headline: string;
+  detail: Record<string, unknown>;
+}
+
+export interface CrowdSnapshot {
+  generated_at: string;
+  game_time: number | null;
+  zones: ZoneCrowd[];
 }
 
 // Wire shape streamed to SSE clients. Matches the frontend BroadcastEventSchema
