@@ -9,12 +9,38 @@ services:
       POSTGRES_DB: postgres
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 20
+      start_period: 60s
+
+  # ── DB init — creates the per-service databases idempotently on EVERY deploy.
+  # Replaces the init-db.sql bind mount, which only runs on a fresh volume (and
+  # didn't apply on the managed host), leaving an existing volume without the
+  # hotel/beach databases. This runs each deploy and self-heals that state.
+  db-init:
+    image: postgres:16-alpine
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    entrypoint:
+      - sh
+      - -c
+      - |
+        for db in hotel beach; do
+          if psql -tAc "SELECT 1 FROM pg_database WHERE datname='$$db'" | grep -q 1; then
+            echo "database $$db already exists";
+          else
+            psql -c "CREATE DATABASE $$db" && echo "created database $$db";
+          fi
+        done
+    restart: "no"
 
   # ── Broadcast (no deps — everything publishes to it) ─────────────────────────
   broadcast:
@@ -59,8 +85,8 @@ services:
       GAME_SPEED: ${GAME_SPEED:-300}
       INTERNAL_SECRET: ${INTERNAL_SECRET:-}
     depends_on:
-      postgres:
-        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
       broadcast:
         condition: service_started
 
@@ -77,8 +103,8 @@ services:
       BROADCAST_SERVICE_URL: http://broadcast:3002
       ADMIN_PASSCODE: ${VITE_ADMIN_PASSCODE:-}
     depends_on:
-      postgres:
-        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
       broadcast:
         condition: service_started
 

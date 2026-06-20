@@ -151,4 +151,14 @@ class PostgresActivityRepository : ActivityRepository {
             ActivityTable.deleteWhere { ActivityTable.id eq idKey } > 0
         }
     }
+
+    override fun findBookedActivityId(visitorId: String): String? {
+        return transaction {
+            ActivityBookingsTable
+                .select { ActivityBookingsTable.visitorId eq visitorId }
+                .limit(1)
+                .map { it[ActivityBookingsTable.activityId] }
+                .singleOrNull()
+        }
+    }
 }

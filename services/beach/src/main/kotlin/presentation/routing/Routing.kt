@@ -35,6 +35,11 @@ fun Route.activityRoutes(
             controller.cancel(call)
         }
 
+        // Registered before "/{activity_id}" so the literal segment wins.
+        get("/by-guest/{guest_id}") {
+            controller.getActivityByGuest(call)
+        }
+
         get("/{activity_id}") {
             controller.getActivity(call)
         }

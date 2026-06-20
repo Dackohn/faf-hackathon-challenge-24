@@ -20,4 +20,7 @@ interface ActivityRepository {
     fun create(id: String, name: String, description: String?, capacity: Int): Activity
 
     fun delete(id: String): Boolean
+
+    // Returns the id of the activity the visitor currently holds, or null.
+    fun findBookedActivityId(visitorId: String): String?
 }
