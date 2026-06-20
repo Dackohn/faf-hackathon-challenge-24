@@ -92,7 +92,7 @@ export async function bookHotel(guest: GuestProfile): Promise<string | null> {
     // stale sessionStorage reservation, recover the existing id
     try {
       const existing = await getReservationByGuest(guest.id);
-      return existing.id;
+      return existing?.id ?? null;
     } catch {
       return null;
     }
