@@ -222,12 +222,16 @@ class GateManager:
         # Select the gate and enqueue under one lock so two concurrent arrivals
         # cannot both read the same shortest gate and pile onto it (TOCTOU).
         with self.assignment_lock:
-    # family-together first, then open/close-aware shortest-gate selection
-        gate = self._family_gate(guest.get("surname"), guest)
-          if gate is None:
-            gate = self._select_gate_for(guest)
-          if gate is None:
-            raise RuntimeError("no open gate available for guest")
+            # Keep families together: prefer the gate where a same-surname member already
+            # is. Fall back to the open/close-aware shortest-gate selection, which only
+            # returns open, compatible gates (and None when none are open).
+            gate = self._family_gate(guest.get("surname"), guest)
+            if gate is None:
+                gate = self._select_gate_for(guest)
+            if gate is None:
+                # Invariant: close_gate never removes the last gate able to serve a
+                # passport type, so a compatible gate always exists here.
+                raise RuntimeError("no open gate available for guest")
 
             guest["queued_at"] = game_now()
             guest["status"] = "queued"
