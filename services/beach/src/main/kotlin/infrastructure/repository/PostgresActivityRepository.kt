@@ -7,6 +7,7 @@ import com.hackathon.summer.faf.domain.repository.ActivityRepository
 import com.hackathon.summer.faf.infrastructure.database.table.ActivityBookingsTable
 import com.hackathon.summer.faf.infrastructure.database.table.ActivityTable
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.sql.Connection
 
@@ -119,9 +120,12 @@ class PostgresActivityRepository : ActivityRepository {
                 .count() > 0
             if (!activityExists) return@transaction CancellationOutcome.ACTIVITY_NOT_FOUND
 
+            // Locals avoid shadowing the columns of the deleteWhere table receiver.
+            val activityKey = activityId
+            val visitorKey = visitorId
             val deleted = ActivityBookingsTable.deleteWhere {
-                (ActivityBookingsTable.activityId eq activityId) and
-                    (ActivityBookingsTable.visitorId eq visitorId)
+                (ActivityBookingsTable.activityId eq activityKey) and
+                    (ActivityBookingsTable.visitorId eq visitorKey)
             }
 
             if (deleted == 0) CancellationOutcome.NOT_BOOKED else CancellationOutcome.CANCELLED
