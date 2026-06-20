@@ -45,16 +45,16 @@ services:
   # ── Broadcast (no deps — everything publishes to it) ─────────────────────────
   broadcast:
     build: ./services/broadcast
-    ports:
-      - "3002:3002"
+    expose:
+      - "3002"
     environment:
       PORT: 3002
 
   # ── Airport ───────────────────────────────────────────────────────────────────
   airport:
     build: ./services/airport
-    ports:
-      - "3001:3001"
+    expose:
+      - "3001"
     environment:
       PORT: 3001
       DATABASE_PATH: /data/airport.db
@@ -74,8 +74,8 @@ services:
   # ── Hotel ─────────────────────────────────────────────────────────────────────
   hotel:
     build: ./services/hotel
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     environment:
       PORT: 3000
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/hotel
@@ -93,8 +93,8 @@ services:
   # ── Beach ─────────────────────────────────────────────────────────────────────
   beach:
     build: ./services/beach
-    ports:
-      - "8080:8080"
+    expose:
+      - "8080"
     environment:
       APP_PORT: 8080
       JDBC_URL: jdbc:postgresql://postgres:5432/beach
@@ -110,8 +110,8 @@ services:
   # ── Parrot (LLM assistant) — round-robin pool of 2 per the grading sheet ─────
   parrot:
     build: ./services/parrot
-    ports:
-      - "3003:3003"
+    expose:
+      - "3003"
     environment:
       PORT: 3003
       LLM_BASE_URL: ${LLM_BASE_URL:-https://openrouter.ai/api/v1}
@@ -147,8 +147,8 @@ services:
   # ── Gateway ───────────────────────────────────────────────────────────────────
   gateway:
     build: ./gateway
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     environment:
       PORT: 8000
       AIRPORT_SERVICE_URL: http://airport:3001
@@ -181,8 +181,8 @@ services:
         VITE_PARROT_CHAT_COOLDOWN_MS: ${VITE_PARROT_CHAT_COOLDOWN_MS:-30000}
         VITE_SIMULATION_START_TIME: ${VITE_SIMULATION_START_TIME:-2026-06-20T00:00:00Z}
         VITE_GAME_SPEED: ${VITE_GAME_SPEED:-300}
-    ports:
-      - "5173:80"
+    expose:
+      - "80"
     depends_on:
       - gateway
 
