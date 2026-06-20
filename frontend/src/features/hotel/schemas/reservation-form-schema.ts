@@ -27,6 +27,10 @@ export function formToRequest(
     guest_id: guestId,
     room_type: values.room_type,
     guest_count: values.guest_count,
+    party_guest_ids: Array.from(
+      { length: values.guest_count },
+      (_, i) => (i === 0 ? guestId : `${guestId}-${i + 1}`)
+    ),
     check_in_day: dateToSimulationDay(values.check_in_date),
     check_out_day: dateToSimulationDay(values.check_out_date),
   };
