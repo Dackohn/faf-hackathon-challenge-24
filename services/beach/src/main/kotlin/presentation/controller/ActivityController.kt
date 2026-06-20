@@ -9,6 +9,7 @@ import com.hackathon.summer.faf.domain.repository.ActivityRepository
 import com.hackathon.summer.faf.infrastructure.broadcast.BroadcastClient
 import com.hackathon.summer.faf.presentation.request.CreateActivityRequest
 import com.hackathon.summer.faf.presentation.request.VisitorRequest
+import com.hackathon.summer.faf.presentation.response.ActivityDetailResponse
 import com.hackathon.summer.faf.presentation.response.ActivityResponse
 import com.hackathon.summer.faf.presentation.response.ErrorResponse
 import domain.error.ActivityErrors
@@ -32,6 +33,23 @@ class ActivityController(
         val client = broadcastClient ?: return
         val activity = activityRepository.findById(activityId) ?: return
         client.notifyActivityStatus(activity.id, activity.name, activity.remaining(), activity.isFull())
+    }
+
+    suspend fun getActivitiesDetail(call: ApplicationCall) {
+        if (!isAdminAuthorized(call)) return
+
+        val activities = activityRepository.findAll()
+        val response = activities.map { activity ->
+            ActivityDetailResponse(
+                activity_id = activity.id,
+                activity_name = activity.name,
+                description = activity.description,
+                capacity = activity.capacity,
+                remaining = activity.remaining(),
+                visitors = activity.bookedVisitors.toList()
+            )
+        }
+        call.respond(HttpStatusCode.OK, mapOf("activities" to response))
     }
 
     suspend fun createActivity(call: ApplicationCall) {

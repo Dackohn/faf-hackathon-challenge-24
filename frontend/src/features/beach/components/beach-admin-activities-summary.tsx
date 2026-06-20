@@ -1,16 +1,71 @@
 import { useState } from "react";
-import { IconAlertCircle, IconLoader2, IconPlus, IconTrash } from "@tabler/icons-react";
+import { IconAlertCircle, IconChevronDown, IconChevronRight, IconLoader2, IconPlus, IconTrash, IconUsers } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getActivities } from "@/features/beach/api/beach-client";
+import { getAdminActivitiesDetail } from "@/features/beach/api/beach-client";
 import { BEACH_KEYS } from "@/features/beach/query-keys";
 import { ActivityCard } from "@/features/beach/components/activity-card";
 import { useAdminActivities } from "@/features/beach/hooks/use-admin-activities";
+import { env } from "@/config/env";
 import { POLL_INTERVAL_MS } from "@/lib/polling";
+import type { ActivityDetail } from "@/features/beach/types";
+
+function ActivityDetailCard({ activity, onDelete, isDeleting }: {
+  activity: ActivityDetail;
+  onDelete: () => void;
+  isDeleting: boolean;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const booked = activity.capacity - activity.remaining;
+
+  return (
+    <div className="flex flex-col">
+      <ActivityCard
+        activity={activity}
+        action={
+          <div className="flex shrink-0 items-center gap-1">
+            {booked > 0 && (
+              <button
+                onClick={() => setExpanded((v) => !v)}
+                className="flex items-center gap-1 rounded px-1.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                <IconUsers size={12} />
+                <span className="tabular-nums">{booked}</span>
+                {expanded ? <IconChevronDown size={12} /> : <IconChevronRight size={12} />}
+              </button>
+            )}
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+              disabled={isDeleting}
+              onClick={onDelete}
+            >
+              {isDeleting ? (
+                <IconLoader2 size={13} className="animate-spin" />
+              ) : (
+                <IconTrash size={13} />
+              )}
+            </Button>
+          </div>
+        }
+      />
+      {expanded && booked > 0 && (
+        <div className="ml-2 mt-1 flex flex-col gap-0.5 border-l-2 border-(--zone-accent)/30 pl-3">
+          {activity.visitors.map((id) => (
+            <span key={id} className="font-mono text-xs text-muted-foreground">
+              {id}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const EMPTY_FORM = {
   activity_id: "",
@@ -21,8 +76,8 @@ const EMPTY_FORM = {
 
 export function BeachAdminActivitiesSummary() {
   const { data, isLoading, error } = useQuery({
-    queryKey: [...BEACH_KEYS.ACTIVITIES],
-    queryFn: getActivities,
+    queryKey: [...BEACH_KEYS.ACTIVITIES_DETAIL],
+    queryFn: () => getAdminActivitiesDetail(env.adminPasscode),
     refetchInterval: POLL_INTERVAL_MS,
   });
 
@@ -66,13 +121,21 @@ export function BeachAdminActivitiesSummary() {
 
   const activities = data.activities;
   const totalRemaining = activities.reduce((sum, a) => sum + a.remaining, 0);
+  const totalBooked = activities.reduce((sum, a) => sum + (a.capacity - a.remaining), 0);
 
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <span className="font-display text-sm font-medium">Beach activities</span>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">{totalRemaining} slots left</span>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <IconUsers size={11} />
+              {totalBooked}
+            </span>
+            <span>·</span>
+            <span>{totalRemaining} slots left</span>
+          </div>
           <Button
             size="sm"
             variant="outline"
@@ -155,24 +218,11 @@ export function BeachAdminActivitiesSummary() {
 
       <div className="flex flex-col gap-2">
         {activities.map((activity) => (
-          <ActivityCard
+          <ActivityDetailCard
             key={activity.activity_id}
             activity={activity}
-            action={
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-7 w-7 shrink-0 p-0 text-muted-foreground hover:text-destructive"
-                disabled={isDeleting && deletingId === activity.activity_id}
-                onClick={() => remove(activity.activity_id)}
-              >
-                {isDeleting && deletingId === activity.activity_id ? (
-                  <IconLoader2 size={13} className="animate-spin" />
-                ) : (
-                  <IconTrash size={13} />
-                )}
-              </Button>
-            }
+            onDelete={() => remove(activity.activity_id)}
+            isDeleting={isDeleting && deletingId === activity.activity_id}
           />
         ))}
       </div>

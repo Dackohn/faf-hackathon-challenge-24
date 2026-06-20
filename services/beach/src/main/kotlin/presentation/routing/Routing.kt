@@ -53,4 +53,9 @@ fun Route.activityRoutes(
     get("/activities") {
         controller.getActivities(call)
     }
+
+    // Admin-only: activities with full visitor roster. Requires X-Admin-Passcode.
+    get("/admin/activities") {
+        controller.getActivitiesDetail(call)
+    }
 }
