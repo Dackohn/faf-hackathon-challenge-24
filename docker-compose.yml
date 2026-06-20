@@ -1,0 +1,126 @@
+services:
+
+  # ── Shared database ───────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Broadcast (no deps — everything publishes to it) ─────────────────────────
+  broadcast:
+    build: ./services/broadcast
+    ports:
+      - "3002:3002"
+    environment:
+      PORT: 3002
+
+  # ── Airport ───────────────────────────────────────────────────────────────────
+  airport:
+    build: ./services/airport
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: 3001
+      DATABASE_PATH: /data/airport.db
+      BROADCAST_SERVICE_URL: http://broadcast:3002
+      SIMULATION_START_TIME: ${SIMULATION_START_TIME:-2026-06-20T00:00:00Z}
+      GAME_SPEED: ${GAME_SPEED:-300}
+      EU_GATES: ${EU_GATES:-3}
+      ALL_GATES: ${ALL_GATES:-2}
+      PROCESSING_TIME_EU: ${PROCESSING_TIME_EU:-300}
+      PROCESSING_TIME_ALL: ${PROCESSING_TIME_ALL:-600}
+      INTERNAL_SECRET: ${INTERNAL_SECRET:-}
+    volumes:
+      - airport_data:/data
+    depends_on:
+      - broadcast
+
+  # ── Hotel ─────────────────────────────────────────────────────────────────────
+  hotel:
+    build: ./services/hotel
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/hotel
+      AIRPORT_SERVICE_URL: http://airport:3001
+      BROADCAST_SERVICE_URL: http://broadcast:3002
+      SIMULATION_START_TIME: ${SIMULATION_START_TIME:-2026-06-20T00:00:00Z}
+      GAME_SPEED: ${GAME_SPEED:-300}
+      INTERNAL_SECRET: ${INTERNAL_SECRET:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      broadcast:
+        condition: service_started
+
+  # ── Beach ─────────────────────────────────────────────────────────────────────
+  beach:
+    build: ./services/beach
+    ports:
+      - "8080:8080"
+    environment:
+      APP_PORT: 8080
+      JDBC_URL: jdbc:postgresql://postgres:5432/beach
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      BROADCAST_SERVICE_URL: http://broadcast:3002
+    depends_on:
+      postgres:
+        condition: service_healthy
+      broadcast:
+        condition: service_started
+
+  # ── Gateway ───────────────────────────────────────────────────────────────────
+  gateway:
+    build: ./gateway
+    ports:
+      - "8000:8000"
+    environment:
+      PORT: 8000
+      AIRPORT_SERVICE_URL: http://airport:3001
+      HOTEL_SERVICE_URL: http://hotel:3000
+      BEACH_SERVICE_URL: http://beach:8080
+      BROADCAST_SERVICE_URL: http://broadcast:3002
+      PARROT_SERVICE_URL: http://parrot:3003
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
+      INTERNAL_SECRET: ${INTERNAL_SECRET:-}
+      GATEWAY_CACHE_TTL: ${GATEWAY_CACHE_TTL:-0}
+      GATEWAY_RATE_LIMIT: ${GATEWAY_RATE_LIMIT:-0}
+      GATEWAY_RATE_WINDOW: ${GATEWAY_RATE_WINDOW:-1m}
+    depends_on:
+      - airport
+      - hotel
+      - beach
+      - broadcast
+
+  # ── Frontend ──────────────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_GATEWAY_URL: ${VITE_GATEWAY_URL:-http://localhost:8000}
+        VITE_MOCK: ${VITE_MOCK:-false}
+        VITE_ADMIN_PASSCODE: ${VITE_ADMIN_PASSCODE:-}
+        VITE_TRAFFIC_GENERATOR: ${VITE_TRAFFIC_GENERATOR:-on}
+        VITE_PARROT_CHAT_COOLDOWN_MS: ${VITE_PARROT_CHAT_COOLDOWN_MS:-30000}
+        VITE_SIMULATION_START_TIME: ${VITE_SIMULATION_START_TIME:-2026-06-20T00:00:00Z}
+        VITE_GAME_SPEED: ${VITE_GAME_SPEED:-300}
+    ports:
+      - "5173:80"
+    depends_on:
+      - gateway
+
+volumes:
+  postgres_data:
+  airport_data:
