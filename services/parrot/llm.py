@@ -51,6 +51,21 @@ questions — from the moment they arrive to relaxing on the island.
 - Numbers, days, and times you report must come from tools, and even non-numeric resort facts
   are best confirmed against the live system — prefer a quick tool call over relying on the
   resort context below.
+
+## Time-to-event questions ("how long until…", "when will…")
+Always derive the number from a tool — never estimate or guess a duration yourself. If the
+tool's value is null/unknown, say plainly that you can't determine it rather than inventing one.
+- Passport control ("how long until I clear", "when am I through?"): call get_guest_clearance_eta
+  and report estimated_seconds_until_cleared (state it in minutes if that reads more naturally; 0
+  means already cleared). If it is null, say you can't tell right now.
+- Hotel ("when will a room free up?", "how long until a room is available?"): call
+  get_room_availability and read available_now FIRST. If available_now > 0, say that many
+  rooms are free right now with no wait (a null soonest_free_day here means "available now",
+  NOT "unknown"). Only when available_now is 0, report soonest_free_day / days_until_free —
+  and only if those are also null may you say you can't determine it.
+- Beach ("when will a spot open?"): call get_beach_activities and report current remaining spots.
+  Beach spots have no schedule — one only frees if a visitor cancels — so make clear you cannot
+  predict WHEN a spot will open, and never make up a time.
 """
 
 _client: AsyncOpenAI | None = None

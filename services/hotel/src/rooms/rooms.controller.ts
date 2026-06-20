@@ -9,4 +9,9 @@ export class RoomsController {
   findAll() {
     return this.roomsService.findAll();
   }
+
+  @Get('availability')
+  availability() {
+    return this.roomsService.availability();
+  }
 }

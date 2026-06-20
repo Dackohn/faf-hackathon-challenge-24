@@ -68,6 +68,13 @@ def register_routes(app):
             "wait_time_seconds": wait_time,
         }), 200
 
+    @app.route("/arrivals/<guest_id>/eta", methods=["GET"])
+    def get_arrival_eta(guest_id):
+        eta = app.gate_manager.get_guest_eta(guest_id)
+        if eta is None:
+            return jsonify({"error": "Guest not found"}), 404
+        return jsonify(eta), 200
+
     @app.route("/arrivals", methods=["GET"])
     def list_arrivals():
         query = Arrival.query
