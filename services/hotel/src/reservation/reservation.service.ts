@@ -167,7 +167,6 @@ export class ReservationService {
     }
   }
 
-  // see findActiveByGuestId for the optimized query path
   async findById(id: string): Promise<ReservationResponseDto> {
     const reservation = await this.prisma.reservation.findUnique({
       where: { id },
@@ -194,35 +193,31 @@ export class ReservationService {
   }
 
   async findActiveByGuestId(guestId: string): Promise<ReservationResponseDto> {
-    const rows = await this.prisma.$queryRaw<any[]>(
-      Prisma.sql`
-        SELECT r.id, r.guest_id, r.room_id, r.guest_count, r.check_in_day, r.check_out_day, r.status,
-               rm.type AS room_type
-        FROM "Reservation" r
-        JOIN "Room" rm ON rm.id = r.room_id
-        WHERE r.guest_id = ${guestId}
-        ORDER BY r.check_in_day DESC
-        LIMIT 1
-      `,
-    );
+    // "Active" means CONFIRMED: a guest whose only reservation is cancelled has
+    // no active reservation, so by-guest must 404 (otherwise the UI keeps showing
+    // a cancelled booking and a cancel looks like it did nothing).
+    const reservation = await this.prisma.reservation.findFirst({
+      where: { guest_id: guestId, status: ReservationStatus.CONFIRMED },
+      orderBy: { check_in_day: 'desc' },
+      include: { room: true },
+    });
 
-    if (!rows.length) {
+    if (!reservation) {
       throw new HttpException(
         { error: 'Reservation not found' },
         HttpStatus.NOT_FOUND,
       );
     }
 
-    const row = rows[0];
     return {
-      id: row.id,
-      guest_id: row.guest_id,
-      room_id: row.room_id,
-      room_type: row.room_type,
-      guest_count: row.guest_count,
-      check_in_day: row.check_in_day,
-      check_out_day: row.check_out_day,
-      status: row.status,
+      id: reservation.id,
+      guest_id: reservation.guest_id,
+      room_id: reservation.room_id,
+      room_type: reservation.room.type,
+      guest_count: reservation.guest_count,
+      check_in_day: reservation.check_in_day,
+      check_out_day: reservation.check_out_day,
+      status: reservation.status,
     };
   }
 
