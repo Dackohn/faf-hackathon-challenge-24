@@ -240,6 +240,13 @@ export class ReservationService {
       );
     }
 
+    if (existingReservation.status === ReservationStatus.CANCELLED) {
+      return {
+        id: existingReservation.id,
+        status: existingReservation.status,
+      };
+    }
+
     const reservation = await this.prisma.reservation.update({
       where: { id },
       data: { status: ReservationStatus.CANCELLED },
