@@ -11,10 +11,14 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 20
+      # Give Postgres time to run init scripts (it restarts internally during
+      # first-boot init), so transient pg_isready failures don't mark it
+      # unhealthy and make dependents bail with "dependency failed to start".
+      start_period: 60s
 
   # ── Broadcast (no deps — everything publishes to it) ─────────────────────────
   broadcast:
