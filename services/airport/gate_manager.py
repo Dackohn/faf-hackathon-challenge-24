@@ -12,11 +12,19 @@ _arrival_schema = ArrivalSchema()
 
 PRIORITY_RANKS = {"fast": 1, "standard": 2}
 
+# Guests strictly under this age are minors: they queue and advance normally but cannot
+# enter the booth / clear control unless a same-surname adult clears together with them.
+MINOR_AGE = 12
+
 
 def _effective_rank(guest: dict) -> int:
     if guest.get("disability"):
         return 0
     return PRIORITY_RANKS.get(guest.get("priority", "standard"), 2)
+
+
+def _is_minor(guest: dict) -> bool:
+    return guest.get("age", MINOR_AGE) < MINOR_AGE
 
 
 class Gate:
@@ -47,45 +55,71 @@ class Gate:
         thread = threading.Thread(target=self._run, daemon=True)
         thread.start()
 
+    def _select_group(self) -> list[dict] | None:
+        """Pick the next family unit to process, or None if nothing is clearable.
+
+        Must be called while holding self.lock. Families are treated as a unit: the first
+        adult (age >= 12) in queue order anchors the group, and every same-surname minor in
+        the queue clears together with them. A minor with no same-surname adult in the queue
+        is held — skipped and left in place — so it advances in line but never enters the
+        booth alone. If the queue holds only such held minors, returns None (booth idles).
+        """
+        for guest in self.queue:
+            if _is_minor(guest):
+                continue  # minors only clear as part of an adult's group, never on their own
+            surname = guest.get("surname")
+            group = [guest] + [
+                g for g in self.queue
+                if g is not guest and _is_minor(g) and g.get("surname") == surname
+            ]
+            for member in group:
+                self.queue.remove(member)
+            return group
+        return None
+
     def _run(self):
         while self.active:
-            guest = None
+            group = None
             with self.lock:
-                if self.queue:
-                    guest = self.queue.pop(0)
-                    guest["status"] = "processing"
-                    self.currently_processing = guest
+                group = self._select_group()
+                if group:
+                    for member in group:
+                        member["status"] = "processing"
+                    # The anchoring adult represents the family in the booth.
+                    self.currently_processing = group[0]
 
-            if guest is None:
+            if not group:
                 time.sleep(0.1)
                 continue
 
             with self.app.app_context():
-                arrival = db.session.get(Arrival, guest["arrival_id"])
-                if arrival:
-                    arrival.status = "processing"
-                    db.session.commit()
+                for member in group:
+                    arrival = db.session.get(Arrival, member["arrival_id"])
+                    if arrival:
+                        arrival.status = "processing"
+                db.session.commit()
 
+            # One booth visit clears the whole family together.
             real_delay = self.processing_time / GAME_SPEED
             time.sleep(real_delay)
 
             processed_at = game_now()
-            # Total wait is from joining the queue until processed, not just the
-            # processing slice — consistent with the in-queue metric in routes.py.
-            wait_time = processed_at - guest["queued_at"]
-            guest["status"] = "processed"
-            guest["processed_at"] = processed_at
-            guest["wait_time_seconds"] = wait_time
-
             with self.app.app_context():
-                arrival = db.session.get(Arrival, guest["arrival_id"])
-                if arrival:
-                    arrival.status = "processed"
-                    arrival.processed_at = processed_at
-                    arrival.wait_time_seconds = wait_time
-                    db.session.commit()
+                for member in group:
+                    # Total wait is from joining the queue until processed, not just the
+                    # processing slice — consistent with the in-queue metric in routes.py.
+                    member["status"] = "processed"
+                    member["processed_at"] = processed_at
+                    member["wait_time_seconds"] = processed_at - member["queued_at"]
+                    arrival = db.session.get(Arrival, member["arrival_id"])
+                    if arrival:
+                        arrival.status = "processed"
+                        arrival.processed_at = processed_at
+                        arrival.wait_time_seconds = member["wait_time_seconds"]
+                db.session.commit()
 
-            self.broadcast.publish_event(guest)
+            for member in group:
+                self.broadcast.publish_event(member)
 
             with self.lock:
                 self.currently_processing = None
@@ -144,16 +178,39 @@ class GateManager:
         candidates = [g for g in self.gates.values() if g.gate_type == gate_type]
         return min(candidates, key=lambda g: len(g.queue))
 
+    def _gate_accepts(self, gate: Gate, guest: dict) -> bool:
+        # ALL gates take any passport; EU gates take EU passports only.
+        return gate.gate_type == "ALL" or guest["passport_type"] == "EU"
+
+    def _family_gate(self, surname: str | None, guest: dict) -> Gate | None:
+        """Gate already hosting a same-surname guest (queued or in the booth), if it can
+        also take this guest — so families queue together and can clear as a unit."""
+        if not surname:
+            return None
+        for gate in self.gates.values():
+            if not self._gate_accepts(gate, guest):
+                continue
+            with gate.lock:
+                cp = gate.currently_processing
+                if cp and cp.get("surname") == surname:
+                    return gate
+                if any(g.get("surname") == surname for g in gate.queue):
+                    return gate
+        return None
+
     def assign_and_enqueue(self, guest: dict) -> dict:
         # Select the gate and enqueue under one lock so two concurrent arrivals
         # cannot both read the same shortest gate and pile onto it (TOCTOU).
         with self.assignment_lock:
-            if guest["passport_type"] == "EU":
-                eu_gate = self._shortest_queue_gate("EU")
-                all_gate = self._shortest_queue_gate("ALL")
-                gate = all_gate if len(all_gate.queue) < len(eu_gate.queue) else eu_gate
-            else:
-                gate = self._shortest_queue_gate("ALL")
+            # Keep families together: prefer the gate where a same-surname member already is.
+            gate = self._family_gate(guest.get("surname"), guest)
+            if gate is None:
+                if guest["passport_type"] == "EU":
+                    eu_gate = self._shortest_queue_gate("EU")
+                    all_gate = self._shortest_queue_gate("ALL")
+                    gate = all_gate if len(all_gate.queue) < len(eu_gate.queue) else eu_gate
+                else:
+                    gate = self._shortest_queue_gate("ALL")
 
             guest["queued_at"] = game_now()
             guest["status"] = "queued"
