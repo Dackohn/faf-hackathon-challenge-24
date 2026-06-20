@@ -6,6 +6,7 @@ import com.hackathon.summer.faf.application.result.CancelActivityResult
 import com.hackathon.summer.faf.application.usecase.BookActivityUseCase
 import com.hackathon.summer.faf.application.usecase.CancelActivityUseCase
 import com.hackathon.summer.faf.domain.repository.ActivityRepository
+import com.hackathon.summer.faf.infrastructure.broadcast.BroadcastClient
 import com.hackathon.summer.faf.presentation.request.CreateActivityRequest
 import com.hackathon.summer.faf.presentation.request.VisitorRequest
 import com.hackathon.summer.faf.presentation.response.ActivityResponse
@@ -23,8 +24,15 @@ class ActivityController(
     private val activityRepository: ActivityRepository,
     private val bookActivityUseCase: BookActivityUseCase,
     private val cancelActivityUseCase: CancelActivityUseCase,
-    private val adminPasscode: String?
+    private val broadcastClient: BroadcastClient? = null,
+    private val adminPasscode: String? = null
 ) {
+
+    private fun notifyActivityStatus(activityId: String) {
+        val client = broadcastClient ?: return
+        val activity = activityRepository.findById(activityId) ?: return
+        client.notifyActivityStatus(activity.id, activity.name, activity.remaining(), activity.isFull())
+    }
 
     suspend fun createActivity(call: ApplicationCall) {
         if (!isAdminAuthorized(call)) return
@@ -104,8 +112,10 @@ class ActivityController(
         val result = bookActivityUseCase.execute(activityId, visitorId)
 
         when (result) {
-            BookActivityResult.BOOKED ->
+            BookActivityResult.BOOKED -> {
                 call.respond(HttpStatusCode.OK, mapOf("status" to "booked"))
+                notifyActivityStatus(activityId)
+            }
 
             BookActivityResult.ACTIVITY_NOT_FOUND ->
                 call.respond(HttpStatusCode.NotFound, ErrorResponse(ActivityErrors.ACTIVITY_NOT_FOUND))
@@ -134,8 +144,10 @@ class ActivityController(
         val result = cancelActivityUseCase.execute(activityId, visitorId)
 
         when (result) {
-            CancelActivityResult.CANCELLED ->
+            CancelActivityResult.CANCELLED -> {
                 call.respond(HttpStatusCode.OK, mapOf("status" to "cancelled"))
+                notifyActivityStatus(activityId)
+            }
 
             CancelActivityResult.ACTIVITY_NOT_FOUND ->
                 call.respond(HttpStatusCode.NotFound, ErrorResponse(ActivityErrors.ACTIVITY_NOT_FOUND))
@@ -192,9 +204,6 @@ class ActivityController(
         )
     }
 
-    // Reads and validates the visitor id from the request body. Responds with a
-    // 400 and returns null if the body is missing or the id is blank, so a
-    // malformed payload no longer crashes the handler with a 500.
     private suspend fun readVisitorId(call: ApplicationCall): String? {
         val request = try {
             call.receive<VisitorRequest>()
