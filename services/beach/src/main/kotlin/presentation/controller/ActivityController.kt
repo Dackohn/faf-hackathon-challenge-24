@@ -6,6 +6,7 @@ import com.hackathon.summer.faf.application.result.CancelActivityResult
 import com.hackathon.summer.faf.application.usecase.BookActivityUseCase
 import com.hackathon.summer.faf.application.usecase.CancelActivityUseCase
 import com.hackathon.summer.faf.domain.repository.ActivityRepository
+import com.hackathon.summer.faf.infrastructure.broadcast.BroadcastClient
 import com.hackathon.summer.faf.presentation.request.VisitorRequest
 import com.hackathon.summer.faf.presentation.response.ActivityResponse
 import com.hackathon.summer.faf.presentation.response.ErrorResponse
@@ -21,8 +22,15 @@ import io.ktor.server.routing.*
 class ActivityController(
     private val activityRepository: ActivityRepository,
     private val bookActivityUseCase: BookActivityUseCase,
-    private val cancelActivityUseCase: CancelActivityUseCase
+    private val cancelActivityUseCase: CancelActivityUseCase,
+    private val broadcastClient: BroadcastClient? = null
 ) {
+
+    private fun notifyActivityStatus(activityId: String) {
+        val client = broadcastClient ?: return
+        val activity = activityRepository.findById(activityId) ?: return
+        client.notifyActivityStatus(activity.id, activity.name, activity.remaining(), activity.isFull())
+    }
 
     suspend fun book(call: ApplicationCall) {
 
@@ -37,8 +45,10 @@ class ActivityController(
         val result = bookActivityUseCase.execute(activityId, visitorId)
 
         when (result) {
-            BookActivityResult.BOOKED ->
+            BookActivityResult.BOOKED -> {
                 call.respond(HttpStatusCode.OK, mapOf("status" to "booked"))
+                notifyActivityStatus(activityId)
+            }
 
             BookActivityResult.ACTIVITY_NOT_FOUND ->
                 call.respond(HttpStatusCode.NotFound, ErrorResponse(ActivityErrors.ACTIVITY_NOT_FOUND))
@@ -67,8 +77,10 @@ class ActivityController(
         val result = cancelActivityUseCase.execute(activityId, visitorId)
 
         when (result) {
-            CancelActivityResult.CANCELLED ->
+            CancelActivityResult.CANCELLED -> {
                 call.respond(HttpStatusCode.OK, mapOf("status" to "cancelled"))
+                notifyActivityStatus(activityId)
+            }
 
             CancelActivityResult.ACTIVITY_NOT_FOUND ->
                 call.respond(HttpStatusCode.NotFound, ErrorResponse(ActivityErrors.ACTIVITY_NOT_FOUND))
