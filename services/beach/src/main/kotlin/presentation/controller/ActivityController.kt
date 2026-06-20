@@ -6,6 +6,7 @@ import com.hackathon.summer.faf.application.result.CancelActivityResult
 import com.hackathon.summer.faf.application.usecase.BookActivityUseCase
 import com.hackathon.summer.faf.application.usecase.CancelActivityUseCase
 import com.hackathon.summer.faf.domain.repository.ActivityRepository
+import com.hackathon.summer.faf.presentation.request.CreateActivityRequest
 import com.hackathon.summer.faf.presentation.request.VisitorRequest
 import com.hackathon.summer.faf.presentation.response.ActivityResponse
 import com.hackathon.summer.faf.presentation.response.ErrorResponse
@@ -21,8 +22,74 @@ import io.ktor.server.routing.*
 class ActivityController(
     private val activityRepository: ActivityRepository,
     private val bookActivityUseCase: BookActivityUseCase,
-    private val cancelActivityUseCase: CancelActivityUseCase
+    private val cancelActivityUseCase: CancelActivityUseCase,
+    private val adminPasscode: String?
 ) {
+
+    suspend fun createActivity(call: ApplicationCall) {
+        if (!isAdminAuthorized(call)) return
+
+        val body = try {
+            call.receive<CreateActivityRequest>()
+        } catch (e: Exception) {
+            call.respond(HttpStatusCode.BadRequest, ErrorResponse("Invalid request body"))
+            return
+        }
+
+        if (body.activity_id.isBlank() || body.activity_name.isBlank() || body.capacity <= 0) {
+            call.respond(HttpStatusCode.BadRequest, ErrorResponse("activity_id, activity_name and capacity are required"))
+            return
+        }
+
+        val activity = activityRepository.create(
+            id = body.activity_id,
+            name = body.activity_name,
+            description = body.description,
+            capacity = body.capacity
+        )
+
+        call.respond(
+            HttpStatusCode.Created,
+            ActivityResponse(
+                activity_id = activity.id,
+                activity_name = activity.name,
+                description = activity.description,
+                capacity = activity.capacity,
+                remaining = activity.remaining()
+            )
+        )
+    }
+
+    suspend fun deleteActivity(call: ApplicationCall) {
+        if (!isAdminAuthorized(call)) return
+
+        val activityId = call.parameters["activity_id"]
+        if (activityId.isNullOrBlank()) {
+            call.respond(HttpStatusCode.BadRequest, ErrorResponse(ActivityErrors.MISSING_ACTIVITY_ID))
+            return
+        }
+
+        val deleted = activityRepository.delete(activityId)
+        if (!deleted) {
+            call.respond(HttpStatusCode.NotFound, ErrorResponse(ActivityErrors.ACTIVITY_NOT_FOUND))
+            return
+        }
+
+        call.respond(HttpStatusCode.OK, mapOf("status" to "deleted"))
+    }
+
+    private suspend fun isAdminAuthorized(call: ApplicationCall): Boolean {
+        if (adminPasscode.isNullOrBlank()) {
+            call.respond(HttpStatusCode.ServiceUnavailable, ErrorResponse("Admin access not configured"))
+            return false
+        }
+        val provided = call.request.headers["X-Admin-Passcode"]
+        if (provided == null || provided != adminPasscode) {
+            call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Unauthorized"))
+            return false
+        }
+        return true
+    }
 
     suspend fun book(call: ApplicationCall) {
 

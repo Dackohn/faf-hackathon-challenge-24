@@ -38,3 +38,17 @@ export type CancelActivityResponse = z.infer<
 export type ActivityByGuestResponse = z.infer<
   typeof ActivityByGuestResponseSchema
 >;
+
+export const CreateActivityRequestSchema = z.object({
+  activity_id: z.string().min(1),
+  activity_name: z.string().min(1),
+  description: z.string().optional(),
+  capacity: z.number().int().min(1),
+});
+
+export const DeleteActivityResponseSchema = z.object({
+  status: z.string(),
+});
+
+export type CreateActivityRequest = z.infer<typeof CreateActivityRequestSchema>;
+export type DeleteActivityResponse = z.infer<typeof DeleteActivityResponseSchema>;

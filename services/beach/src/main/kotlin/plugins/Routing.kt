@@ -17,7 +17,8 @@ fun Application.configureRouting() {
 
     val cancelUseCase = CancelActivityUseCase(activityRepository)
 
-    val controller = ActivityController(activityRepository, bookUseCase, cancelUseCase)
+    val adminPasscode = System.getenv("ADMIN_PASSCODE")
+    val controller = ActivityController(activityRepository, bookUseCase, cancelUseCase, adminPasscode)
 
     routing {
         activityRoutes(controller)

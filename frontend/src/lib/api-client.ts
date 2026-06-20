@@ -65,16 +65,16 @@ function createJsonApi(basePath = "") {
 
   return {
     get: <T>(schema: ZodType<T>, url: string) => request(schema, { url }),
-    post: <T>(schema: ZodType<T>, url: string, data: unknown) =>
-      request(schema, { url, method: "POST", data }),
-    delete: <T>(schema: ZodType<T>, url: string) =>
-      request(schema, { url, method: "DELETE" }),
+    post: <T>(schema: ZodType<T>, url: string, data: unknown, headers?: Record<string, string>) =>
+      request(schema, { url, method: "POST", data, headers }),
+    delete: <T>(schema: ZodType<T>, url: string, headers?: Record<string, string>) =>
+      request(schema, { url, method: "DELETE", headers }),
   };
 }
 
 export const api = {
   airport: createJsonApi("/api/airport"),
-  beach: createJsonApi(),
+  beach: createJsonApi("/api/beach"),
   hotel: createJsonApi("/api/hotel"),
   parrot: createJsonApi("/api/parrot"),
 };
