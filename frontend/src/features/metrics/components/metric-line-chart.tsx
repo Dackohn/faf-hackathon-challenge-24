@@ -77,8 +77,8 @@ export function MetricLineChart({
           />
           <Tooltip
             contentStyle={{ fontSize: 11, background: "hsl(var(--background))", border: "1px solid hsl(var(--border))", borderRadius: 8 }}
-            labelFormatter={(v) => format(new Date(v), "HH:mm:ss")}
-            formatter={(v: number) => [fmt(v)]}
+            labelFormatter={(v) => format(new Date(v as number), "HH:mm:ss")}
+            formatter={(v) => [fmt(Number(v))]}
           />
           {seriesNames.length > 1 && <Legend wrapperStyle={{ fontSize: 10 }} />}
           {seriesNames.map((name, i) => (

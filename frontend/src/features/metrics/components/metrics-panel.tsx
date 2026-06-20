@@ -1,4 +1,4 @@
-import { IconAlertCircle, IconRefreshCw } from "@tabler/icons-react";
+import { IconAlertCircle, IconRefresh } from "@tabler/icons-react";
 import { Spinner } from "@/components/ui/spinner";
 import { MetricLineChart } from "@/features/metrics/components/metric-line-chart";
 import {
@@ -75,7 +75,7 @@ export function MetricsPanel() {
           onClick={() => { gateway.refetch(); sse.refetch(); hotel.refetch(); beach.refetch(); parrot.refetch(); }}
           className="flex items-center gap-1 text-[10px] text-muted-foreground transition-colors hover:text-foreground"
         >
-          <IconRefreshCw size={10} />
+          <IconRefresh size={10} />
           Refresh
         </button>
       </div>
