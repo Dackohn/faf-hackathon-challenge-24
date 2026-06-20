@@ -27,7 +27,29 @@ func NewRateLimiter(limit int, per time.Duration) *RateLimiter {
 	rl := &RateLimiter{clients: make(map[string]*window)}
 	rl.limit.Store(int64(limit))
 	rl.perNs.Store(int64(per))
+	go rl.janitor()
 	return rl
+}
+
+// janitor periodically drops expired client windows so the clients map cannot
+// grow without bound under churning keys (e.g. a load test varying source IPs).
+func (rl *RateLimiter) janitor() {
+	for {
+		per := time.Duration(rl.perNs.Load())
+		if per < time.Minute {
+			per = time.Minute
+		}
+		time.Sleep(per)
+
+		now := time.Now()
+		rl.mu.Lock()
+		for key, w := range rl.clients {
+			if now.After(w.reset) {
+				delete(rl.clients, key)
+			}
+		}
+		rl.mu.Unlock()
+	}
 }
 
 // Limit returns the current per-window request limit.
