@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -63,7 +63,7 @@ func MetricsMiddleware(next http.Handler) http.Handler {
 		activeRequests.WithLabelValues(service).Inc()
 		defer activeRequests.WithLabelValues(service).Dec()
 
-		rw := chi.NewResponseWriter(w, r)
+		rw := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 		start := time.Now()
 		next.ServeHTTP(rw, r)
 
