@@ -145,9 +145,14 @@ Response 202:
   "gate": "EU-1",
   "position": 1,
   "queue_size": 1,
-  "queued_at": 12345.67
+  "queued_at": 12345.67,
+  "estimated_wait_seconds": 300.0
 }
 ```
+
+`estimated_wait_seconds` is a rough estimate, in game-time seconds, of how long until the guest
+is processed. It is `(guests ahead at the gate + this guest) × gate processing time`, where
+"guests ahead" counts the one currently being processed (if any) plus those ahead in the queue.
 
 Response 400 — invalid request payload:
 
@@ -193,6 +198,14 @@ Query parameters:
 | --------------- | ------------------------------------ |
 | `status`        | Filter by `queued`, `processing`, or `processed` |
 | `passport_type` | Filter by `EU` or `non-EU`           |
+| `limit`         | Max arrivals per page. Omit to return all arrivals in one response. |
+| `cursor`        | Opaque token from a previous response's `next_cursor`, to fetch the next page. |
+
+Results are ordered newest-first (`queued_at` descending, with `id` as a stable tiebreaker).
+Pagination is cursor-based (keyset): pass the `next_cursor` from one response as the `cursor` of
+the next request to walk the full list with no duplicates or gaps, even as new arrivals are added.
+`next_cursor` is `null` on the last page (and whenever `limit` is omitted). `total` is the count of
+all arrivals matching the filters, independent of the current page.
 
 Response 200:
 
@@ -214,7 +227,9 @@ Response 200:
       "processed_at": 12945.67,
       "wait_time_seconds": 600.0
     }
-  ]
+  ],
+  "next_cursor": "eyJxIjogMTIzNDUuNjcsICJpZCI6IDF9",
+  "total": 1
 }
 ```
 
