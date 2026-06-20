@@ -21,6 +21,8 @@ export enum EventType {
   PUBLIC_ANNOUNCEMENT = "public.announcement",
 
   ANNOUNCEMENT_RESORT = "announcement.resort",
+
+  PARROT_CURSED = "public.cursed",
 }
 
 // Wire shape streamed to SSE clients. Matches the frontend BroadcastEventSchema

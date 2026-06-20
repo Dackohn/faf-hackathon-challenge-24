@@ -7,6 +7,7 @@ import hotelRoutes from "./routes/hotel.js";
 import beachRoutes from "./routes/beach.js";
 import publicRoutes from "./routes/public.js";
 import announcementRoutes from "./routes/announcement.js";
+import parrotRoutes from "./routes/parrot.js";
 import eventRoutes from "./routes/events.js";
 
 dotenv.config();
@@ -28,6 +29,7 @@ app.use("/hotel/", hotelRoutes);
 app.use("/beach/", beachRoutes);
 app.use("/public/", publicRoutes);
 app.use("/announcement/", announcementRoutes);
+app.use("/parrot/", parrotRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

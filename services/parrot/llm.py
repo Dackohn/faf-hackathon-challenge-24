@@ -1,10 +1,12 @@
+import asyncio
 import json
 import logging
 import time
 from typing import TYPE_CHECKING
 from openai import AsyncOpenAI
 from config import settings
-from profanity import mask_profanity
+import broadcast as broadcast_client
+from profanity import mask_profanity, find_triggered_words
 from pii import make_pseudonymizer, Pseudonymizer, StreamRestorer
 from tools import TOOL_SCHEMAS, GUEST_TOOL_SCHEMAS, execute_tool
 from tracing import request_id_ctx
@@ -173,6 +175,11 @@ async def chat(
     history: list[dict] | None = None,
 ) -> tuple[str, list[dict]]:
     pseudo = make_pseudonymizer(guest_id)
+    triggered = find_triggered_words(message)
+    if triggered:
+        asyncio.ensure_future(
+            broadcast_client.notify_cursed(guest_id or "anonymous", message, triggered)
+        )
     messages, new_messages = _assemble(message, guest_id, context, history, pseudo)
     tools = _build_tools(guest_id)
     client = get_client()
@@ -226,6 +233,11 @@ async def chat_stream(
     """
     request_id_ctx.set(request_id)
     pseudo = make_pseudonymizer(guest_id)
+    triggered = find_triggered_words(message)
+    if triggered:
+        asyncio.ensure_future(
+            broadcast_client.notify_cursed(guest_id or "anonymous", message, triggered)
+        )
     restorer = StreamRestorer(pseudo) if pseudo else None
     messages, new_messages = _assemble(message, guest_id, context, history, pseudo)
     tools = _build_tools(guest_id)
