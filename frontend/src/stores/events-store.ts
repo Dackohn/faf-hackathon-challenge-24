@@ -69,7 +69,7 @@ export const useEventsStore = create<EventsState>()((set) => ({
       if (shouldMirrorToResortWide) {
         const mirroredEvent: BroadcastEvent = {
           ...event,
-          id: crypto.randomUUID(),
+          id: (crypto.randomUUID?.() ?? Math.random().toString(36).slice(2)),
           channel: ChannelId.ResortWide,
         };
 
