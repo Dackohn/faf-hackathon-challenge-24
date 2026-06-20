@@ -173,6 +173,7 @@ services:
       GATEWAY_CACHE_TTL: ${GATEWAY_CACHE_TTL:-0}
       GATEWAY_RATE_LIMIT: ${GATEWAY_RATE_LIMIT:-0}
       GATEWAY_RATE_WINDOW: ${GATEWAY_RATE_WINDOW:-1m}
+      PROMETHEUS_SERVICE_URL: http://prometheus:9090
     depends_on:
       - airport
       - hotel
@@ -181,6 +182,7 @@ services:
       - parrot
       - parrot-b
       - dining
+      - prometheus
 
   # ── Frontend ──────────────────────────────────────────────────────────────────
   frontend:
@@ -209,6 +211,7 @@ services:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
       - "--storage.tsdb.retention.time=7d"
+      - "--web.cors.origin=.*"
     ports:
       - "9090:9090"
     depends_on:
@@ -219,21 +222,7 @@ services:
       - broadcast
       - parrot
 
-  grafana:
-    image: grafana/grafana:10.4.2
-    volumes:
-      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
-      - grafana_data:/var/lib/grafana
-    environment:
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
-      GF_USERS_ALLOW_SIGN_UP: "false"
-    ports:
-      - "3010:3000"
-    depends_on:
-      - prometheus
-
 volumes:
   postgres_data:
   airport_data:
   prometheus_data:
-  grafana_data:

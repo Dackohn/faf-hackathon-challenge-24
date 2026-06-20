@@ -59,6 +59,11 @@ func main() {
 		}
 	}
 
+	// Prometheus query API — proxied for the admin metrics UI.
+	if cfg.PrometheusServiceURL != "" {
+		r.Route("/api/prometheus", ProxyRoute(cfg.PrometheusServiceURL))
+	}
+
 	addr := fmt.Sprintf(":%s", cfg.Port)
 	srv := &http.Server{Addr: addr, Handler: r}
 
