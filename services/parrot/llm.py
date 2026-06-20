@@ -83,6 +83,18 @@ def _build_tools(guest_id: str | None) -> list[dict]:
     return tools
 
 
+# Keys that live only on the persisted message (read by admin metrics) and must never
+# be sent to the LLM — stripped from history before each request.
+_META_KEYS = ("censored",)
+
+
+def _without_meta(message: dict) -> dict:
+    """A copy of a history message with persisted-only metadata keys removed."""
+    if not any(k in message for k in _META_KEYS):
+        return message
+    return {k: v for k, v in message.items() if k not in _META_KEYS}
+
+
 def _assemble(
     message: str,
     guest_id: str | None,
@@ -103,15 +115,21 @@ def _assemble(
     if pseudo:
         system_prompt += "\n" + pseudo.profile_block()
 
-    content = mask_profanity(message)
-    if pseudo:
-        content = pseudo.redact_message(content)
+    # Record censorship from the filter's actual action — did mask_profanity change the
+    # text — not from the presence of a '*'. So an innocent asterisk ("2 * 3", a "**"
+    # rating, a self-censored "f*ck") is never counted, only a real masked word is. The
+    # flag rides on the persisted copy only and is kept out of what the model sees (both
+    # this turn and when this turn later replays as history — see _without_meta).
+    masked = mask_profanity(message)
+    censored = masked != message
+    content = pseudo.redact_message(masked) if pseudo else masked
     user_msg = {"role": "user", "content": content}
     messages = [{"role": "system", "content": system_prompt}]
     if history:
-        messages.extend(history)
+        messages.extend(_without_meta(m) for m in history)
     messages.append(user_msg)
-    return messages, [user_msg]
+    persisted_user = {**user_msg, "censored": True} if censored else user_msg
+    return messages, [persisted_user]
 
 
 def _normalize_calls(tool_calls) -> list[dict]:
