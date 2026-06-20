@@ -22,6 +22,25 @@ export enum EventType {
 
   ANNOUNCEMENT_RESORT = "announcement.resort",
 
+  CROWD_UPDATE = "crowd.update",
+}
+
+export type CrowdLevel = "calm" | "moderate" | "busy" | "unknown";
+export type CrowdTrend = "improving" | "steady" | "worsening";
+
+export interface ZoneCrowd {
+  zone: string;
+  level: CrowdLevel;
+  load: number | null;
+  trend: CrowdTrend;
+  headline: string;
+  detail: Record<string, unknown>;
+}
+
+export interface CrowdSnapshot {
+  generated_at: string;
+  game_time: number | null;
+  zones: ZoneCrowd[];
   PARROT_CURSED = "public.cursed",
 }
 

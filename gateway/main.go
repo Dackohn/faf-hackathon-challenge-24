@@ -42,6 +42,7 @@ func main() {
 		"/api/beach":     cfg.BeachServicePool,
 		"/api/broadcast": cfg.BroadcastServicePool,
 		"/api/parrot":    cfg.ParrotServicePool,
+		"/api/dining":    cfg.DiningServicePool,
 	}
 	for prefix, pool := range pools {
 		switch len(pool) {

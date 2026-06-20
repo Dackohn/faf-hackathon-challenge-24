@@ -9,6 +9,8 @@ import publicRoutes from "./routes/public.js";
 import announcementRoutes from "./routes/announcement.js";
 import parrotRoutes from "./routes/parrot.js";
 import eventRoutes from "./routes/events.js";
+import crowdRoutes from "./routes/crowd.js";
+import { startCrowdMonitor } from "./crowd/monitor.js";
 
 dotenv.config();
 
@@ -29,8 +31,10 @@ app.use("/hotel/", hotelRoutes);
 app.use("/beach/", beachRoutes);
 app.use("/public/", publicRoutes);
 app.use("/announcement/", announcementRoutes);
+app.use("/crowd/", crowdRoutes);
 app.use("/parrot/", parrotRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  startCrowdMonitor();
 });

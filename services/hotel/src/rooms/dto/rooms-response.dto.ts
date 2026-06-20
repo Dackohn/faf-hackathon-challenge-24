@@ -3,7 +3,7 @@ export interface RoomResponseDto {
   type: string;
   capacity: number;
   price_per_night: number;
-  current_guests: number;
+  occupancy: number;
 }
 
 export interface RoomsResponseDto {

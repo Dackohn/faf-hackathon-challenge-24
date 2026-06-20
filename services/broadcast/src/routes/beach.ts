@@ -24,7 +24,7 @@ router.post("/full", (req, res) => {
     event_type: EventType.BEACH_FULL,
     message: body.message,
     sender: body.sender,
-    data: body.data as unknown as Record<string, unknown>,
+    data: { ...body.data },
   });
 
   res.json({ success: true });
@@ -48,7 +48,7 @@ router.post("/available", (req, res) => {
     event_type: EventType.BEACH_AVAILABLE,
     message: body.message,
     sender: body.sender,
-    data: body.data as unknown as Record<string, unknown>,
+    data: { ...body.data },
   });
 
   res.json({ success: true });

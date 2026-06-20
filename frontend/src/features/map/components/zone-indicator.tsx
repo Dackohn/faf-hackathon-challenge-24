@@ -4,6 +4,7 @@ import { ZoneId } from "@/features/map/constants";
 import { useLanded } from "@/features/airport/hooks/use-airport";
 import { useCheckedIn } from "@/features/beach/hooks/use-checked-in";
 import { useZoneActivityTick } from "@/features/map/hooks/use-zone-activity-tick";
+import { CROWD_LEVEL_COLOR, type CrowdLevel } from "@/features/crowd/types";
 import { cn } from "@/lib/utils";
 import { useIsAdmin } from "@/stores/session-selectors";
 
@@ -18,6 +19,7 @@ interface ZoneIndicatorProps {
   markerScale?: number;
   healthLevel?: number;
   eventRate?: number;
+  crowdLevel?: CrowdLevel;
   onClick?: (id: ZoneId) => void;
 }
 
@@ -32,6 +34,7 @@ export function ZoneIndicator({
   accent,
   markerSrc,
   markerScale = 1,
+  crowdLevel,
   onClick,
 }: ZoneIndicatorProps) {
   const isAdmin = useIsAdmin();
@@ -43,7 +46,7 @@ export function ZoneIndicator({
   const previousTickRef = useRef(activityTick);
 
   const needsLanding = id !== ZoneId.Airport;
-  const needsCheckin = id === ZoneId.Beach;
+  const needsCheckin = id === ZoneId.Beach || id === ZoneId.Dining;
   const isLockedForGuest =
     (needsLanding && !landed) || (needsCheckin && !checkedIn);
   const locked = !isAdmin && isLockedForGuest;
@@ -79,6 +82,16 @@ export function ZoneIndicator({
         height: radius * 2,
       }}
     >
+      {crowdLevel && (
+        <div
+          data-testid={`zone-crowd-halo-${id}`}
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 rounded-full"
+          style={{
+            background: `radial-gradient(circle, color-mix(in srgb, ${CROWD_LEVEL_COLOR[crowdLevel]} 45%, transparent) 0%, transparent 70%)`,
+          }}
+        />
+      )}
       <div
         className="pointer-events-none flex h-full w-full items-center justify-center overflow-visible"
         style={{ transform: `scale(${markerScale})` }}
