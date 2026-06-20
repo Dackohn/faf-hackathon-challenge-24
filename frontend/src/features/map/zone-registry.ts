@@ -5,12 +5,14 @@ import {
   IconUmbrella,
   IconFeather,
   IconBuildingLighthouse,
+  IconToolsKitchen2,
 } from "@tabler/icons-react";
 import airportZoneArt from "@/assets/zones/airport.svg";
 import beachZoneArt from "@/assets/zones/beach.svg";
 import hotelZoneArt from "@/assets/zones/hotel.svg";
 import lighthouseZoneArt from "@/assets/zones/lighthouse.svg";
 import parrotZoneArt from "@/assets/zones/parrot.svg";
+import diningZoneArt from "@/assets/zones/restaurant.png";
 import { ZoneId } from "@/features/map/constants";
 import { ChannelId } from "@/types/broadcast";
 
@@ -28,6 +30,7 @@ export interface ZoneDefinition {
   accent: string;
   markerSrc: string;
   markerScale?: number;
+  markerBackdrop?: boolean;
 }
 
 export const ZONE_REGISTRY: Record<ZoneId, ZoneDefinition> = {
@@ -99,6 +102,21 @@ export const ZONE_REGISTRY: Record<ZoneId, ZoneDefinition> = {
     accent: "#22d3ee",
     markerSrc: lighthouseZoneArt,
     markerScale: 2,
+  },
+  [ZoneId.Dining]: {
+    id: ZoneId.Dining,
+    label: "Dining",
+    description:
+      "Book a table at one of the island's self-serve restaurants and pre-order your food — no small talk required.",
+    adminDescription:
+      "Observe restaurant table reservations and cancellations.",
+    icon: IconToolsKitchen2,
+    channel: ChannelId.Dining,
+    position: { x: 1980, y: 1200 },
+    accent: "#f97316",
+    markerSrc: diningZoneArt,
+    markerScale: 1,
+    markerBackdrop: true,
   },
 };
 
