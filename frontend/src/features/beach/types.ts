@@ -52,5 +52,18 @@ export const ActivitiesDetailResponseSchema = z.object({
   activities: z.array(ActivityDetailSchema),
 });
 
+export const CreateActivityRequestSchema = z.object({
+  activity_id: z.string().min(1),
+  activity_name: z.string().min(1),
+  description: z.string().optional(),
+  capacity: z.number().int().min(1),
+});
+
+export const DeleteActivityResponseSchema = z.object({
+  status: z.string(),
+});
+
 export type ActivityDetail = z.infer<typeof ActivityDetailSchema>;
 export type ActivitiesDetailResponse = z.infer<typeof ActivitiesDetailResponseSchema>;
+export type CreateActivityRequest = z.infer<typeof CreateActivityRequestSchema>;
+export type DeleteActivityResponse = z.infer<typeof DeleteActivityResponseSchema>;
