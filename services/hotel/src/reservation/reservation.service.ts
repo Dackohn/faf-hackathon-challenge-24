@@ -3,6 +3,7 @@ import {
   Prisma,
   Reservation,
   ReservationStatus,
+  RoomType,
 } from '../../generated/prisma/client.js';
 import { AirportService } from '../airport/airport.service';
 import { BroadcastService } from '../broadcast/broadcast.service';
@@ -71,7 +72,7 @@ export class ReservationService {
   // number of times before surfacing the error.
   private async reserveRoomAtomically(
     dto: CreateReservationDto,
-  ): Promise<{ reservation: Reservation; roomType: string }> {
+  ): Promise<{ reservation: Reservation; roomType: RoomType }> {
     const MAX_ATTEMPTS = 3;
 
     for (let attempt = 1; ; attempt++) {
