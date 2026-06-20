@@ -23,6 +23,7 @@ services:
       - "3002:3002"
     environment:
       PORT: 3002
+      ADMIN_PASSCODE: ${VITE_ADMIN_PASSCODE:-}
 
   # ── Airport ───────────────────────────────────────────────────────────────────
   airport:
