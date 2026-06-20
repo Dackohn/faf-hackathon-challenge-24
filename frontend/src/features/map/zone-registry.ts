@@ -30,7 +30,6 @@ export interface ZoneDefinition {
   accent: string;
   markerSrc: string;
   markerScale?: number;
-  markerBackdrop?: boolean;
 }
 
 export const ZONE_REGISTRY: Record<ZoneId, ZoneDefinition> = {
@@ -116,7 +115,6 @@ export const ZONE_REGISTRY: Record<ZoneId, ZoneDefinition> = {
     accent: "#f97316",
     markerSrc: diningZoneArt,
     markerScale: 1,
-    markerBackdrop: true,
   },
 };
 

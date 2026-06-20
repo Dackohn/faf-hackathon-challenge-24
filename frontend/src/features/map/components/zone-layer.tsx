@@ -35,7 +35,6 @@ export function ZoneLayer({ mapW, mapH, onZoneClick }: ZoneLayerProps) {
             accent={zone.accent}
             markerSrc={zone.markerSrc}
             markerScale={zone.markerScale}
-            markerBackdrop={zone.markerBackdrop}
             crowdLevel={crowdByZone[id]?.level}
             onClick={onZoneClick}
           />

@@ -17,7 +17,6 @@ interface ZoneIndicatorProps {
   accent: string;
   markerSrc: string;
   markerScale?: number;
-  markerBackdrop?: boolean;
   healthLevel?: number;
   eventRate?: number;
   crowdLevel?: CrowdLevel;
@@ -35,7 +34,6 @@ export function ZoneIndicator({
   accent,
   markerSrc,
   markerScale = 1,
-  markerBackdrop = false,
   crowdLevel,
   onClick,
 }: ZoneIndicatorProps) {
@@ -98,18 +96,12 @@ export function ZoneIndicator({
         className="pointer-events-none flex h-full w-full items-center justify-center overflow-visible"
         style={{ transform: `scale(${markerScale})` }}
       >
-        {markerBackdrop && (
-          <div
-            aria-hidden="true"
-            className="absolute inset-[12%] rounded-full border-2 border-sky-200/80 bg-sky-400/90 shadow-md"
-          />
-        )}
         <img
           src={markerSrc}
           alt=""
           aria-hidden="true"
           className={cn(
-            "zone-marker-asset relative h-full w-full object-contain select-none",
+            "zone-marker-asset h-full w-full object-contain select-none",
             locked && "is-locked",
             isActive && "is-active"
           )}
