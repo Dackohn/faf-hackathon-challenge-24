@@ -24,6 +24,7 @@ function createEmptyChannelEvents(): Record<ChannelId, BroadcastEvent[]> {
     [ChannelId.Parrot]: [],
     [ChannelId.Broadcast]: [],
     [ChannelId.ResortWide]: [],
+    [ChannelId.Dining]: [],
   };
 }
 
@@ -35,6 +36,7 @@ function createEmptyActivityTicks(): Record<ChannelId, number> {
     [ChannelId.Parrot]: 0,
     [ChannelId.Broadcast]: 0,
     [ChannelId.ResortWide]: 0,
+    [ChannelId.Dining]: 0,
   };
 }
 

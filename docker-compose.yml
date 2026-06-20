@@ -133,6 +133,22 @@ services:
       - airport
       - hotel
 
+  # ── Dining ────────────────────────────────────────────────────────────────────
+  dining:
+    build: ./services/dining
+    ports:
+      - "3004:3004"
+    environment:
+      PORT: 3004
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/dining
+      BROADCAST_SERVICE_URL: http://broadcast:3002
+      INTERNAL_SECRET: ${INTERNAL_SECRET:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      broadcast:
+        condition: service_started
+
   # ── Gateway ───────────────────────────────────────────────────────────────────
   gateway:
     build: ./gateway
@@ -145,6 +161,7 @@ services:
       BEACH_SERVICE_URL: http://beach:8080
       BROADCAST_SERVICE_URL: http://broadcast:3002
       PARROT_SERVICE_URL: http://parrot:3003,http://parrot-b:3003
+      DINING_SERVICE_URL: http://dining:3004
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
       INTERNAL_SECRET: ${INTERNAL_SECRET:-}
       GATEWAY_CACHE_TTL: ${GATEWAY_CACHE_TTL:-0}
@@ -157,6 +174,7 @@ services:
       - broadcast
       - parrot
       - parrot-b
+      - dining
 
   # ── Frontend ──────────────────────────────────────────────────────────────────
   frontend:

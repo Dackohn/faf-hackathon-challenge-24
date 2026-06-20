@@ -91,4 +91,5 @@ export const api = {
   broadcast: createJsonApi("/api/broadcast"),
   hotel: createJsonApi("/api/hotel"),
   parrot: createJsonApi("/api/parrot"),
+  dining: createJsonApi("/api/dining"),
 };

@@ -12,6 +12,13 @@ export function getCurrentSimulationDay(): number {
   return Math.floor(elapsedGameSeconds / 86400);
 }
 
+// Dining's seating_slot is an in-game hour bucket (0, 1, 2, ...) since simulation start.
+export function getCurrentSimulationHour(): number {
+  const elapsedRealSeconds = (Date.now() - anchor.getTime()) / 1000;
+  const elapsedGameSeconds = elapsedRealSeconds * GAME_SPEED;
+  return Math.floor(elapsedGameSeconds / 3600);
+}
+
 export function dateToSimulationDay(date: Date): number {
   return differenceInDays(startOfDay(date), startOfDay(anchor));
 }

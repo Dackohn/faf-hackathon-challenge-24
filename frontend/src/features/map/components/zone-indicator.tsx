@@ -46,7 +46,7 @@ export function ZoneIndicator({
   const previousTickRef = useRef(activityTick);
 
   const needsLanding = id !== ZoneId.Airport;
-  const needsCheckin = id === ZoneId.Beach;
+  const needsCheckin = id === ZoneId.Beach || id === ZoneId.Dining;
   const isLockedForGuest =
     (needsLanding && !landed) || (needsCheckin && !checkedIn);
   const locked = !isAdmin && isLockedForGuest;
