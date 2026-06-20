@@ -210,7 +210,6 @@ services:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
       - "--storage.tsdb.retention.time=7d"
-      - "--web.cors.origin=.*"
     ports:
       - "9090:9090"
     depends_on:

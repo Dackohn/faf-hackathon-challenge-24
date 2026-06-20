@@ -28,6 +28,16 @@ func ProxyRoute(target string) func(chi.Router) {
 		w.Write([]byte(`{"error": "Service unavailable"}`))
 	}
 
+	// Strip any CORS headers the backend may add — the gateway's CORSMiddleware
+	// owns all Access-Control-* headers; duplicates from backends confuse browsers.
+	proxy.ModifyResponse = func(resp *http.Response) error {
+		resp.Header.Del("Access-Control-Allow-Origin")
+		resp.Header.Del("Access-Control-Allow-Methods")
+		resp.Header.Del("Access-Control-Allow-Headers")
+		resp.Header.Del("Access-Control-Allow-Credentials")
+		return nil
+	}
+
 	// Flush immediately — critical for SSE passthrough from Broadcast service
 	proxy.FlushInterval = -1
 
