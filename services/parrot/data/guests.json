@@ -1,0 +1,152 @@
+{
+  "mango-miles": {
+    "name": "Miles",
+    "surname": "Mango",
+    "age": 34,
+    "passport": "EU"
+  },
+  "luna-lagoon": {
+    "name": "Luna",
+    "surname": "Lagoon",
+    "age": 29,
+    "passport": "non-EU"
+  },
+  "coral-reef": {
+    "name": "Coral",
+    "surname": "Reef",
+    "age": 42,
+    "passport": "non-EU"
+  },
+  "solana-breeze": {
+    "name": "Solana",
+    "surname": "Breeze",
+    "age": 25,
+    "passport": "EU"
+  },
+  "palm-pierce": {
+    "name": "Pierce",
+    "surname": "Palm",
+    "age": 51,
+    "passport": "EU"
+  },
+  "marina-shells": {
+    "name": "Marina",
+    "surname": "Shells",
+    "age": 37,
+    "passport": "EU"
+  },
+  "captain-coconut": {
+    "name": "Cody",
+    "surname": "Coconut",
+    "age": 46,
+    "passport": "EU"
+  },
+  "talia-tide": {
+    "name": "Talia",
+    "surname": "Tide",
+    "age": 31,
+    "passport": "EU"
+  },
+  "reef-rivers": {
+    "name": "Reef",
+    "surname": "Rivers",
+    "age": 68,
+    "passport": "EU"
+  },
+  "sim-guest-mango-0001": {
+    "name": "Mango",
+    "surname": "Marin",
+    "age": 29,
+    "passport": "EU"
+  },
+  "sim-guest-coral-0002": {
+    "name": "Coral",
+    "surname": "Vale",
+    "age": 34,
+    "passport": "non-EU"
+  },
+  "sim-guest-palm-0003": {
+    "name": "Palm",
+    "surname": "Ionescu",
+    "age": 41,
+    "passport": "EU"
+  },
+  "sim-guest-lagoon-0004": {
+    "name": "Lagoon",
+    "surname": "Reef",
+    "age": 25,
+    "passport": "non-EU"
+  },
+  "sim-guest-sunny-0005": {
+    "name": "Sunny",
+    "surname": "Popescu",
+    "age": 52,
+    "passport": "EU"
+  },
+  "sim-guest-breeze-0006": {
+    "name": "Breeze",
+    "surname": "Costa",
+    "age": 31,
+    "passport": "non-EU"
+  },
+  "sim-guest-coconut-0007": {
+    "name": "Coconut",
+    "surname": "Dima",
+    "age": 38,
+    "passport": "EU"
+  },
+  "sim-guest-pearl-0008": {
+    "name": "Pearl",
+    "surname": "Nistor",
+    "age": 46,
+    "passport": "EU"
+  },
+  "sim-guest-tide-0009": {
+    "name": "Tide",
+    "surname": "Lupu",
+    "age": 33,
+    "passport": "non-EU"
+  },
+  "sim-guest-dune-0010": {
+    "name": "Dune",
+    "surname": "Florescu",
+    "age": 27,
+    "passport": "EU"
+  },
+  "sim-guest-wave-0011": {
+    "name": "Wave",
+    "surname": "Barbu",
+    "age": 39,
+    "passport": "EU"
+  },
+  "sim-guest-shell-0012": {
+    "name": "Shell",
+    "surname": "Oprea",
+    "age": 44,
+    "passport": "non-EU"
+  },
+  "sim-guest-reef-0013": {
+    "name": "Reef",
+    "surname": "Stan",
+    "age": 22,
+    "passport": "non-EU"
+  },
+  "sim-guest-cove-0014": {
+    "name": "Cove",
+    "surname": "Gheorghe",
+    "age": 55,
+    "passport": "EU"
+  },
+  "sim-guest-gale-0015": {
+    "name": "Gale",
+    "surname": "Matei",
+    "age": 30,
+    "passport": "EU"
+  },
+  "sim-guest-drift-0016": {
+    "name": "Drift",
+    "surname": "Popa",
+    "age": 48,
+    "passport": "non-EU"
+  }
+}

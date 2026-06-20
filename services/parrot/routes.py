@@ -11,6 +11,7 @@ from schemas import (
 )
 from history import ConversationStore
 from llm import chat, chat_stream
+from pii import make_pseudonymizer
 from tracing import request_id_ctx
 import admin
 
@@ -67,7 +68,13 @@ async def chat_stream_endpoint(req: ChatRequest, request: Request):
 @router.get("/history/{guest_id}", response_model=HistoryResponse)
 async def get_history(guest_id: str, request: Request):
     store: ConversationStore = request.app.state.store
-    return HistoryResponse(guest_id=guest_id, messages=store.get_visible(guest_id))
+    messages = store.get_visible(guest_id)
+    # History is stored in placeholder form (PII-free at rest); restore the guest's real
+    # values for this guest-facing read so the transcript stays personalised.
+    pseudo = make_pseudonymizer(guest_id)
+    if pseudo:
+        messages = [{**m, "content": pseudo.restore(m.get("content"))} for m in messages]
+    return HistoryResponse(guest_id=guest_id, messages=messages)
 
 
 @router.get("/admin/metrics", response_model=MetricsResponse)

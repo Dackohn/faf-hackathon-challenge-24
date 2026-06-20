@@ -16,4 +16,8 @@ interface ActivityRepository {
 
     // Atomically releases the visitor's booking.
     fun cancel(activityId: String, visitorId: String): CancellationOutcome
+
+    fun create(id: String, name: String, description: String?, capacity: Int): Activity
+
+    fun delete(id: String): Boolean
 }

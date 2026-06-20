@@ -131,4 +131,24 @@ class PostgresActivityRepository : ActivityRepository {
             if (deleted == 0) CancellationOutcome.NOT_BOOKED else CancellationOutcome.CANCELLED
         }
     }
+
+    override fun create(id: String, name: String, description: String?, capacity: Int): Activity {
+        return transaction {
+            ActivityTable.insert {
+                it[ActivityTable.id] = id
+                it[ActivityTable.name] = name
+                it[ActivityTable.description] = description
+                it[ActivityTable.capacity] = capacity
+            }
+            Activity(id = id, name = name, description = description, capacity = capacity)
+        }
+    }
+
+    override fun delete(id: String): Boolean {
+        return transaction {
+            val idKey = id
+            ActivityBookingsTable.deleteWhere { ActivityBookingsTable.activityId eq idKey }
+            ActivityTable.deleteWhere { ActivityTable.id eq idKey } > 0
+        }
+    }
 }

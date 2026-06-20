@@ -7,6 +7,15 @@ import { env } from "@/config/env";
 export type ApiError = { ok: false; status: number; message: string };
 export type ApiResult<T> = { ok: true; data: T } | ApiError;
 
+export class ApiRequestError extends Error {
+  status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
+}
+
 // Extraxts a human message out of an error field that may be a string, an array
 // of strings, or an array of objects.
 function extractField(value: unknown): string | null {
@@ -56,7 +65,10 @@ function createJsonApi(basePath = "") {
       return schema.parse(data);
     } catch (err) {
       if (isAxiosError(err)) {
-        throw new Error(getErrorMessage(err.response?.data, err.message));
+        throw new ApiRequestError(
+          err.response?.status ?? 0,
+          getErrorMessage(err.response?.data, err.message)
+        );
       }
 
       throw err;
@@ -64,17 +76,19 @@ function createJsonApi(basePath = "") {
   }
 
   return {
-    get: <T>(schema: ZodType<T>, url: string) => request(schema, { url }),
-    post: <T>(schema: ZodType<T>, url: string, data: unknown) =>
-      request(schema, { url, method: "POST", data }),
-    delete: <T>(schema: ZodType<T>, url: string) =>
-      request(schema, { url, method: "DELETE" }),
+    get: <T>(schema: ZodType<T>, url: string, headers?: Record<string, string>) =>
+      request(schema, { url, headers }),
+    post: <T>(schema: ZodType<T>, url: string, data: unknown, headers?: Record<string, string>) =>
+      request(schema, { url, method: "POST", data, headers }),
+    delete: <T>(schema: ZodType<T>, url: string, headers?: Record<string, string>) =>
+      request(schema, { url, method: "DELETE", headers }),
   };
 }
 
 export const api = {
   airport: createJsonApi("/api/airport"),
-  beach: createJsonApi(),
+  beach: createJsonApi("/api/beach"),
+  broadcast: createJsonApi("/api/broadcast"),
   hotel: createJsonApi("/api/hotel"),
   parrot: createJsonApi("/api/parrot"),
 };

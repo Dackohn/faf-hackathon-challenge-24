@@ -23,6 +23,12 @@ services:
       - "3002:3002"
     environment:
       PORT: 3002
+      AIRPORT_TOKEN: ${AIRPORT_TOKEN:-}
+      HOTEL_TOKEN: ${HOTEL_TOKEN:-}
+      BEACH_TOKEN: ${BEACH_TOKEN:-}
+      PARROT_TOKEN: ${PARROT_TOKEN:-}
+      FE_TOKEN: ${FE_TOKEN:-}
+      ADMIN_PASSCODE: ${VITE_ADMIN_PASSCODE:-}
 
   # ── Airport ───────────────────────────────────────────────────────────────────
   airport:
@@ -75,6 +81,8 @@ services:
       DB_USER: postgres
       DB_PASSWORD: postgres
       BROADCAST_SERVICE_URL: http://broadcast:3002
+      ADMIN_PASSCODE: ${VITE_ADMIN_PASSCODE:-}
+      BEACH_TOKEN: ${BEACH_TOKEN:-}
     depends_on:
       postgres:
         condition: service_healthy

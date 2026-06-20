@@ -2,41 +2,56 @@ import { Router } from "express";
 import { v4 as uuid } from "uuid";
 import { broadcast } from "../eventBus.js";
 import { ChannelId, EventType } from "../types.js";
+import { parseBeachActivity, ValidationError } from "../schemas.js";
 
 const router = Router();
 
 router.post("/full", (req, res) => {
-  const { message, sender, data } = req.body ?? {};
+  let body;
+  try {
+    body = parseBeachActivity(req.body);
+  } catch (err) {
+    if (err instanceof ValidationError) {
+      res.status(400).json({ error: err.message });
+      return;
+    }
+    throw err;
+  }
 
   broadcast({
     id: uuid(),
     channel: ChannelId.Beach,
     event_type: EventType.BEACH_FULL,
-    message: message ?? "A beach activity is now full.",
-    sender: sender ?? "beach-service",
-    data: data ?? {},
+    message: body.message,
+    sender: body.sender,
+    data: body.data as unknown as Record<string, unknown>,
   });
 
-  res.json({
-    success: true,
-  });
+  res.json({ success: true });
 });
 
 router.post("/available", (req, res) => {
-  const { message, sender, data } = req.body ?? {};
+  let body;
+  try {
+    body = parseBeachActivity(req.body);
+  } catch (err) {
+    if (err instanceof ValidationError) {
+      res.status(400).json({ error: err.message });
+      return;
+    }
+    throw err;
+  }
 
   broadcast({
     id: uuid(),
     channel: ChannelId.Beach,
     event_type: EventType.BEACH_AVAILABLE,
-    message: message ?? "A beach activity has spots available again.",
-    sender: sender ?? "beach-service",
-    data: data ?? {},
+    message: body.message,
+    sender: body.sender,
+    data: body.data as unknown as Record<string, unknown>,
   });
 
-  res.json({
-    success: true,
-  });
+  res.json({ success: true });
 });
 
 export default router;
