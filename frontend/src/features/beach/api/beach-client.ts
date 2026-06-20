@@ -5,11 +5,14 @@ import {
   ActivityByGuestResponseSchema,
   BookActivityResponseSchema,
   CancelActivityResponseSchema,
+  DeleteActivityResponseSchema,
   type ActivitiesResponse,
   type Activity,
   type ActivityByGuestResponse,
   type BookActivityResponse,
   type CancelActivityResponse,
+  type CreateActivityRequest,
+  type DeleteActivityResponse,
 } from "@/features/beach/types";
 
 export function getActivities(): Promise<ActivitiesResponse> {
@@ -51,4 +54,22 @@ export function getActivityByGuest(
     ActivityByGuestResponseSchema,
     `/activity/by-guest/${guestId}`
   );
+}
+
+export function createActivity(
+  body: CreateActivityRequest,
+  passcode: string
+): Promise<Activity> {
+  return api.beach.post(ActivitySchema, "/activity", body, {
+    "X-Admin-Passcode": passcode,
+  });
+}
+
+export function deleteActivity(
+  activityId: string,
+  passcode: string
+): Promise<DeleteActivityResponse> {
+  return api.beach.delete(DeleteActivityResponseSchema, `/activity/${activityId}`, {
+    "X-Admin-Passcode": passcode,
+  });
 }

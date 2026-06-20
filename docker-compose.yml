@@ -75,6 +75,7 @@ services:
       DB_USER: postgres
       DB_PASSWORD: postgres
       BROADCAST_SERVICE_URL: http://broadcast:3002
+      ADMIN_PASSCODE: ${VITE_ADMIN_PASSCODE:-}
     depends_on:
       postgres:
         condition: service_healthy

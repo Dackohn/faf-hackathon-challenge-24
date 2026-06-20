@@ -17,10 +17,12 @@ fun Application.configureRouting() {
     val bookUseCase = BookActivityUseCase(activityRepository, visitorRepository)
     val cancelUseCase = CancelActivityUseCase(activityRepository)
 
+    val adminPasscode = System.getenv("ADMIN_PASSCODE")
     val broadcastUrl = System.getenv("BROADCAST_SERVICE_URL")
     val broadcastClient = if (!broadcastUrl.isNullOrBlank()) BroadcastClient(broadcastUrl) else null
 
-    val controller = ActivityController(activityRepository, bookUseCase, cancelUseCase, broadcastClient)
+    val controller = ActivityController(activityRepository, bookUseCase, cancelUseCase, broadcastClient, adminPasscode)
+
 
     routing {
         activityRoutes(controller)

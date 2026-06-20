@@ -38,6 +38,16 @@ fun Route.activityRoutes(
         get("/{activity_id}") {
             controller.getActivity(call)
         }
+
+        // Admin-only: create a new activity. Requires X-Admin-Passcode header.
+        post {
+            controller.createActivity(call)
+        }
+
+        // Admin-only: remove an activity by id. Requires X-Admin-Passcode header.
+        delete("/{activity_id}") {
+            controller.deleteActivity(call)
+        }
     }
 
     get("/activities") {
