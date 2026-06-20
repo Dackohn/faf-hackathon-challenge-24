@@ -163,7 +163,7 @@ async def chat(
                 new_messages.append(tool_msg)
             continue
 
-        reply = choice.message.content or FALLBACK
+        reply = mask_profanity(choice.message.content or FALLBACK)
         new_messages.append({"role": "assistant", "content": reply})
         return reply, new_messages
 
@@ -261,7 +261,7 @@ async def chat_stream(
             # No tool calls — the final answer is everything streamed this turn, so the
             # client's concatenated token deltas always equal done.reply (any preamble
             # emitted before a tool call in an earlier round stays part of the reply).
-            reply = "".join(streamed_parts) or FALLBACK
+            reply = mask_profanity("".join(streamed_parts) or FALLBACK)
             new_messages.append({"role": "assistant", "content": reply})
             yield _sse("done", {"reply": reply})
             yield "data: [DONE]\n\n"

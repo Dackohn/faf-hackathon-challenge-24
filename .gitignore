@@ -77,3 +77,6 @@ dist
 npm-debug.log
 .git
 .vscode
+INSTRUCTIONS.md
+PROJECT_UNDERSTANDING.md
+SECURITY_AUDIT.md

@@ -30,8 +30,9 @@ func main() {
 	// Health check (aggregates all backend health endpoints)
 	r.Get("/health", HealthHandler(cfg))
 
-	// Admin: adjust the rate limiter at runtime.
-	r.Put("/admin/rate-limit", AdminRateLimitHandler(rl))
+	// Admin: adjust the rate limiter at runtime. Guarded by the internal key so
+	// the rate-limit control plane is not exposed to public callers.
+	r.With(AuthMiddleware).Put("/admin/rate-limit", AdminRateLimitHandler(rl))
 
 	// Route to backend services. Each *_SERVICE_URL may list several instances
 	// (comma-separated); a pool with more than one URL is round-robined.

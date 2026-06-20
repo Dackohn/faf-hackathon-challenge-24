@@ -22,9 +22,32 @@ type responseCache struct {
 }
 
 func newResponseCache(ttl time.Duration) *responseCache {
-	return &responseCache{
+	c := &responseCache{
 		entries: make(map[string]cacheEntry),
 		ttl:     ttl,
+	}
+	go c.janitor()
+	return c
+}
+
+// janitor periodically evicts expired entries so keys that are cached once and
+// never requested again don't pin memory forever (get() only evicts on access).
+func (c *responseCache) janitor() {
+	interval := c.ttl
+	if interval < time.Minute {
+		interval = time.Minute
+	}
+	for {
+		time.Sleep(interval)
+
+		now := time.Now()
+		c.mu.Lock()
+		for key, e := range c.entries {
+			if now.After(e.expires) {
+				delete(c.entries, key)
+			}
+		}
+		c.mu.Unlock()
 	}
 }
 

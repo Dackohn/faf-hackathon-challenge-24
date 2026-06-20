@@ -1,5 +1,10 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { Prisma, ReservationStatus } from '../../generated/prisma/client.js';
+import {
+  Prisma,
+  Reservation,
+  ReservationStatus,
+  RoomType,
+} from '../../generated/prisma/client.js';
 import { AirportService } from '../airport/airport.service';
 import { BroadcastService } from '../broadcast/broadcast.service';
 import { HotelBroadcastEventType } from '../broadcast/hotel-events';
@@ -28,64 +33,12 @@ export class ReservationService {
       );
     }
 
-    const rooms = await this.prisma.room.findMany({
-      where: { type: createReservationDto.room_type },
-      orderBy: { id: 'asc' },
-    });
+    // Validate before any write so a failing check can never leave an orphaned
+    // CONFIRMED row behind (write-before-validate smell).
+    await this.rejectIfGuestHasNotClearedAirport(createReservationDto.guest_id);
 
-    const maxCapacity = Math.max(...rooms.map((room) => room.capacity));
-    if (createReservationDto.guest_count > maxCapacity) {
-      throw new HttpException(
-        {
-          error: `Room type ${createReservationDto.room_type} supports at most ${maxCapacity} guests`,
-        },
-        HttpStatus.CONFLICT,
-      );
-    }
-
-    let availableRoom: (typeof rooms)[number] | null = null;
-
-    for (const room of rooms) {
-      if (createReservationDto.guest_count > room.capacity) {
-        continue;
-      }
-
-      const overlappingReservationCount = await this.prisma.reservation.count({
-        where: {
-          room_id: room.id,
-          status: ReservationStatus.CONFIRMED,
-          check_in_day: { lte: createReservationDto.check_out_day },
-          check_out_day: { gte: createReservationDto.check_in_day },
-        },
-      });
-
-      if (overlappingReservationCount === 0) {
-        availableRoom = room;
-        break;
-      }
-    }
-
-    if (!availableRoom) {
-      throw new HttpException(
-        {
-          error: `No available rooms of type ${createReservationDto.room_type} for days ${createReservationDto.check_in_day}-${createReservationDto.check_out_day}`,
-        },
-        HttpStatus.CONFLICT,
-      );
-    }
-
-    const reservation = await this.prisma.reservation.create({
-      data: {
-        guest_id: createReservationDto.guest_id,
-        room_id: availableRoom.id,
-        guest_count: createReservationDto.guest_count,
-        check_in_day: createReservationDto.check_in_day,
-        check_out_day: createReservationDto.check_out_day,
-        status: ReservationStatus.CONFIRMED,
-      },
-    });
-
-    await this.rejectIfGuestHasNotClearedAirport(reservation.guest_id);
+    const { reservation, roomType } =
+      await this.reserveRoomAtomically(createReservationDto);
 
     await this.broadcast.publishHotelEvent(
       HotelBroadcastEventType.ReservationConfirmed,
@@ -93,7 +46,7 @@ export class ReservationService {
         message: 'Hotel reservation confirmed.',
         reservation_id: reservation.id,
         guest_id: reservation.guest_id,
-        room_type: availableRoom.type,
+        room_type: roomType,
         guest_count: reservation.guest_count,
         check_in_day: reservation.check_in_day,
         check_out_day: reservation.check_out_day,
@@ -104,12 +57,100 @@ export class ReservationService {
       id: reservation.id,
       guest_id: reservation.guest_id,
       room_id: reservation.room_id,
-      room_type: availableRoom.type,
+      room_type: roomType,
       guest_count: reservation.guest_count,
       check_in_day: reservation.check_in_day,
       check_out_day: reservation.check_out_day,
       status: reservation.status,
     };
+  }
+
+  // Scans candidate rooms and creates the reservation inside a single
+  // SERIALIZABLE transaction, so two concurrent requests cannot both observe
+  // the same room as free and double-book it. Postgres aborts the losing
+  // transaction with a serialization failure (Prisma P2034); we retry a bounded
+  // number of times before surfacing the error.
+  private async reserveRoomAtomically(
+    dto: CreateReservationDto,
+  ): Promise<{ reservation: Reservation; roomType: RoomType }> {
+    const MAX_ATTEMPTS = 3;
+
+    for (let attempt = 1; ; attempt++) {
+      try {
+        return await this.prisma.$transaction(
+          async (tx) => {
+            const rooms = await tx.room.findMany({
+              where: { type: dto.room_type },
+              orderBy: { id: 'asc' },
+            });
+
+            const maxCapacity = Math.max(...rooms.map((room) => room.capacity));
+            if (dto.guest_count > maxCapacity) {
+              throw new HttpException(
+                {
+                  error: `Room type ${dto.room_type} supports at most ${maxCapacity} guests`,
+                },
+                HttpStatus.CONFLICT,
+              );
+            }
+
+            let availableRoom: (typeof rooms)[number] | null = null;
+
+            for (const room of rooms) {
+              if (dto.guest_count > room.capacity) {
+                continue;
+              }
+
+              const overlappingReservationCount = await tx.reservation.count({
+                where: {
+                  room_id: room.id,
+                  status: ReservationStatus.CONFIRMED,
+                  check_in_day: { lte: dto.check_out_day },
+                  check_out_day: { gte: dto.check_in_day },
+                },
+              });
+
+              if (overlappingReservationCount === 0) {
+                availableRoom = room;
+                break;
+              }
+            }
+
+            if (!availableRoom) {
+              throw new HttpException(
+                {
+                  error: `No available rooms of type ${dto.room_type} for days ${dto.check_in_day}-${dto.check_out_day}`,
+                },
+                HttpStatus.CONFLICT,
+              );
+            }
+
+            const reservation = await tx.reservation.create({
+              data: {
+                guest_id: dto.guest_id,
+                room_id: availableRoom.id,
+                guest_count: dto.guest_count,
+                check_in_day: dto.check_in_day,
+                check_out_day: dto.check_out_day,
+                status: ReservationStatus.CONFIRMED,
+              },
+            });
+
+            return { reservation, roomType: availableRoom.type };
+          },
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        );
+      } catch (err) {
+        if (
+          err instanceof Prisma.PrismaClientKnownRequestError &&
+          err.code === 'P2034' &&
+          attempt < MAX_ATTEMPTS
+        ) {
+          continue;
+        }
+        throw err;
+      }
+    }
   }
 
   private async rejectIfGuestHasNotClearedAirport(
@@ -159,7 +200,7 @@ export class ReservationService {
                rm.type AS room_type
         FROM "Reservation" r
         JOIN "Room" rm ON rm.id = r.room_id
-        WHERE r.guest_id = ${Prisma.raw(`'${guestId}'`)}
+        WHERE r.guest_id = ${guestId}
         ORDER BY r.check_in_day DESC
         LIMIT 1
       `,
@@ -186,13 +227,10 @@ export class ReservationService {
   }
 
   async cancel(id: string): Promise<CancelReservationResponseDto> {
-    // id is UUID generated server-side, not user-controlled string
-    await this.prisma.$executeRaw(
-      Prisma.sql`UPDATE "Reservation" SET status = 'CANCELLED' WHERE id = ${Prisma.raw(`'${id}'`)}`,
-    );
-
-    const existingReservation = await this.prisma.reservation.findFirst({
-      where: { id, status: ReservationStatus.CANCELLED },
+    // id arrives straight from the request URL (DELETE /reservation/:id), so it
+    // must be bound, never interpolated. Prisma's typed client binds parameters.
+    const existingReservation = await this.prisma.reservation.findUnique({
+      where: { id },
     });
 
     if (!existingReservation) {
@@ -202,8 +240,9 @@ export class ReservationService {
       );
     }
 
-    const reservation = await this.prisma.reservation.findUniqueOrThrow({
-      where: { id: existingReservation.id },
+    const reservation = await this.prisma.reservation.update({
+      where: { id },
+      data: { status: ReservationStatus.CANCELLED },
       include: { room: true },
     });
 
