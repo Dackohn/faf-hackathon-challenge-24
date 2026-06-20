@@ -16,6 +16,15 @@ fun Route.activityRoutes(
             "Hello"
         )
     }
+
+    // Health probe for the gateway's aggregate /health check.
+    get("/health") {
+        call.respond(
+            HttpStatusCode.OK,
+            mapOf("status" to "ok")
+        )
+    }
+
     route("/activity") {
 
         post("/book/{activity_id}") {

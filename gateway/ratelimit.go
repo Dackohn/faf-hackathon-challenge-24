@@ -27,7 +27,29 @@ func NewRateLimiter(limit int, per time.Duration) *RateLimiter {
 	rl := &RateLimiter{clients: make(map[string]*window)}
 	rl.limit.Store(int64(limit))
 	rl.perNs.Store(int64(per))
+	go rl.janitor()
 	return rl
+}
+
+// janitor periodically drops expired client windows so the clients map cannot
+// grow without bound under churning keys (e.g. a load test varying source IPs).
+func (rl *RateLimiter) janitor() {
+	for {
+		per := time.Duration(rl.perNs.Load())
+		if per < time.Minute {
+			per = time.Minute
+		}
+		time.Sleep(per)
+
+		now := time.Now()
+		rl.mu.Lock()
+		for key, w := range rl.clients {
+			if now.After(w.reset) {
+				delete(rl.clients, key)
+			}
+		}
+		rl.mu.Unlock()
+	}
 }
 
 // Limit returns the current per-window request limit.
@@ -48,22 +70,21 @@ func (rl *RateLimiter) allow(key string) bool {
 	limit := int(rl.limit.Load())
 	per := time.Duration(rl.perNs.Load())
 
+	// Read, check and increment in one critical section so concurrent requests
+	// for the same key cannot all observe the same count and slip past the limit.
 	rl.mu.Lock()
+	defer rl.mu.Unlock()
+
 	w := rl.clients[key]
 	now := time.Now()
 	if w == nil || now.After(w.reset) {
 		w = &window{count: 0, reset: now.Add(per)}
 		rl.clients[key] = w
 	}
-	cur := w.count
-	rl.mu.Unlock()
-
-	if cur >= limit {
+	if w.count >= limit {
 		return false
 	}
-	rl.mu.Lock()
 	w.count++
-	rl.mu.Unlock()
 	return true
 }
 

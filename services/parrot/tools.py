@@ -90,10 +90,24 @@ _DISPATCH = {
     "get_guest_journey_status": lambda *, guest_id, **_: get_guest_journey_status(guest_id),
 }
 
+# Tools that expose a single guest's private data. Their guest_id must be the
+# authenticated caller's, never a value the model picked.
+GUEST_SCOPED_TOOLS = frozenset(
+    {"get_guest_arrival_status", "get_guest_reservation", "get_guest_journey_status"}
+)
+
 async def execute_tool(name: str, arguments: dict, allowed_guest_id: str | None) -> str:
     fn = _DISPATCH.get(name)
     if fn is None:
         return json.dumps({"error": f"Unknown tool: {name}"})
+
+    if name in GUEST_SCOPED_TOOLS:
+        # Never trust the model-supplied guest_id: a guest could ask the assistant
+        # to look up someone else's data. Force the request's own guest_id so a
+        # guest-scoped tool can only ever read the authenticated caller's records.
+        if not allowed_guest_id:
+            return json.dumps({"error": "No guest is associated with this conversation."})
+        arguments = {**arguments, "guest_id": allowed_guest_id}
 
     try:
         return await fn(**arguments)
