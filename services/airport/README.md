@@ -87,10 +87,28 @@ Each gate runs a background worker thread that processes guests one at a time.
 
 When a guest arrives via `POST /arrivals`:
 
-1. Determine the candidate gate by passport type:
+1. **Family affinity first:** if a same-surname guest is already at a gate (queued or in the
+   booth) and that gate accepts the new guest's passport type, the new guest joins that same
+   gate so the family queues together. (EU gates take EU only; ALL gates take any passport, so
+   a same-surname member always fits an ALL gate. A non-EU member cannot join a family sitting
+   at an EU gate and is load-balanced normally instead.)
+2. Otherwise, determine the candidate gate by passport type:
    - `non-EU` guests are assigned to the shortest ALL gate.
    - `EU` guests are assigned to the shortest EU gate, but spill over to the shortest ALL gate when that ALL gate's queue is strictly shorter (cross-type load balancing).
-2. Insert into the chosen gate's priority queue
+3. Insert into the chosen gate's priority queue
+
+### Families and the minor-hold rule
+
+Passport control treats a **family** as all guests sharing a `surname` at the same gate, and a
+**minor** as any guest under 12 (`age < 12`).
+
+- Minors queue and advance through the line normally.
+- A minor may **not** enter the booth or be processed alone. The booth clears a family as a
+  unit: the first adult (`age >= 12`) in queue order is processed together, in a single booth
+  visit, with every same-surname minor in that queue.
+- A minor with **no** same-surname adult in the queue is **held** — skipped at the booth and
+  left in line — so it keeps advancing but never clears alone. If the queue contains only such
+  held minors, the gate idles until an accompanying adult arrives.
 
 ### Priority ordering
 
