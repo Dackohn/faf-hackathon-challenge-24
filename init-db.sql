@@ -1,0 +1,2 @@
+CREATE DATABASE hotel;
+CREATE DATABASE beach;

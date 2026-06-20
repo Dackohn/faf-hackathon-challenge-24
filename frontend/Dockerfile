@@ -1,0 +1,37 @@
+FROM node:22-slim AS builder
+
+RUN npm install -g pnpm@10.18.0
+
+WORKDIR /app
+
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+
+COPY . .
+
+# VITE_* vars must be present at build time — Vite inlines them into the bundle
+ARG VITE_GATEWAY_URL=http://localhost:8000
+ARG VITE_MOCK=false
+ARG VITE_ADMIN_PASSCODE=
+ARG VITE_TRAFFIC_GENERATOR=on
+ARG VITE_PARROT_CHAT_COOLDOWN_MS=30000
+ARG VITE_SIMULATION_START_TIME=2026-06-20T00:00:00Z
+ARG VITE_GAME_SPEED=300
+
+ENV VITE_GATEWAY_URL=$VITE_GATEWAY_URL
+ENV VITE_MOCK=$VITE_MOCK
+ENV VITE_ADMIN_PASSCODE=$VITE_ADMIN_PASSCODE
+ENV VITE_TRAFFIC_GENERATOR=$VITE_TRAFFIC_GENERATOR
+ENV VITE_PARROT_CHAT_COOLDOWN_MS=$VITE_PARROT_CHAT_COOLDOWN_MS
+ENV VITE_SIMULATION_START_TIME=$VITE_SIMULATION_START_TIME
+ENV VITE_GAME_SPEED=$VITE_GAME_SPEED
+
+RUN pnpm build
+
+
+FROM nginx:alpine
+
+COPY --from=builder /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
