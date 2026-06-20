@@ -205,6 +205,45 @@ class GateManager:
                     return i + 1
         return None
 
+    def get_guest_eta(self, guest_id: str) -> dict | None:
+        """Estimate the game-seconds until a guest clears passport control.
+
+        Gates process one guest at a time for `processing_time` game-seconds, so the
+        estimate is (guests that must finish before this one, including the guest's own
+        slice) * processing_time. Returns None if the guest is unknown, and a null
+        estimate if the guest is no longer in a gate's pipeline."""
+        guest = self.get_guest(guest_id)
+        if guest is None:
+            return None
+
+        status = guest["status"]
+        gate_id = guest.get("gate")
+        result = {"guest_id": guest_id, "status": status, "gate": gate_id}
+
+        if status == "processed":
+            result["estimated_seconds_until_cleared"] = 0
+            return result
+
+        gate = self.gates.get(gate_id)
+        if gate is None:
+            result["estimated_seconds_until_cleared"] = None
+            return result
+
+        with gate.lock:
+            if gate.currently_processing and gate.currently_processing["guest_id"] == guest_id:
+                ahead = 0  # already at the desk
+            else:
+                idx = next((i for i, g in enumerate(gate.queue) if g["guest_id"] == guest_id), None)
+                if idx is None:
+                    result["estimated_seconds_until_cleared"] = None
+                    return result
+                # guests ahead = those still queued before this one + the one at the desk
+                ahead = idx + (1 if gate.currently_processing else 0)
+
+        result["position"] = ahead + 1
+        result["estimated_seconds_until_cleared"] = round((ahead + 1) * gate.processing_time, 1)
+        return result
+
     def get_all_gates_status(self) -> dict:
         now = game_now()
         gates_list = []
