@@ -16,4 +16,7 @@ interface ActivityRepository {
 
     // Atomically releases the visitor's booking.
     fun cancel(activityId: String, visitorId: String): CancellationOutcome
+
+    // Returns the id of the activity the visitor currently holds, or null.
+    fun findBookedActivityId(visitorId: String): String?
 }

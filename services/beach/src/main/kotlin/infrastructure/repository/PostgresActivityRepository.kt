@@ -131,4 +131,16 @@ class PostgresActivityRepository : ActivityRepository {
             if (deleted == 0) CancellationOutcome.NOT_BOOKED else CancellationOutcome.CANCELLED
         }
     }
+
+    override fun findBookedActivityId(visitorId: String): String? {
+
+        return transaction {
+
+            ActivityBookingsTable
+                .select { ActivityBookingsTable.visitorId eq visitorId }
+                .limit(1)
+                .map { it[ActivityBookingsTable.activityId] }
+                .singleOrNull()
+        }
+    }
 }

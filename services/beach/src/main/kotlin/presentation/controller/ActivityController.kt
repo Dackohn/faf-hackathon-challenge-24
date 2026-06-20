@@ -8,6 +8,7 @@ import com.hackathon.summer.faf.application.usecase.CancelActivityUseCase
 import com.hackathon.summer.faf.domain.repository.ActivityRepository
 import com.hackathon.summer.faf.presentation.request.VisitorRequest
 import com.hackathon.summer.faf.presentation.response.ActivityResponse
+import com.hackathon.summer.faf.presentation.response.BookedActivityResponse
 import com.hackathon.summer.faf.presentation.response.ErrorResponse
 import domain.error.ActivityErrors
 import domain.error.VisitorErrors
@@ -101,6 +102,22 @@ class ActivityController(
                 capacity = activity.capacity,
                 remaining = activity.remaining()
             )
+        )
+    }
+
+    suspend fun getActivityByGuest(call: ApplicationCall) {
+
+        val guestId = call.parameters["guest_id"]
+        if (guestId.isNullOrBlank()) {
+            call.respond(HttpStatusCode.BadRequest, ErrorResponse(VisitorErrors.VISITOR_MISSING_ID))
+            return
+        }
+
+        val activityId = activityRepository.findBookedActivityId(guestId)
+
+        call.respond(
+            HttpStatusCode.OK,
+            BookedActivityResponse(activity_id = activityId)
         )
     }
 
