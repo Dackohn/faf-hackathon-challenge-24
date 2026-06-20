@@ -48,22 +48,21 @@ func (rl *RateLimiter) allow(key string) bool {
 	limit := int(rl.limit.Load())
 	per := time.Duration(rl.perNs.Load())
 
+	// Read, check and increment in one critical section so concurrent requests
+	// for the same key cannot all observe the same count and slip past the limit.
 	rl.mu.Lock()
+	defer rl.mu.Unlock()
+
 	w := rl.clients[key]
 	now := time.Now()
 	if w == nil || now.After(w.reset) {
 		w = &window{count: 0, reset: now.Add(per)}
 		rl.clients[key] = w
 	}
-	cur := w.count
-	rl.mu.Unlock()
-
-	if cur >= limit {
+	if w.count >= limit {
 		return false
 	}
-	rl.mu.Lock()
 	w.count++
-	rl.mu.Unlock()
 	return true
 }
 
