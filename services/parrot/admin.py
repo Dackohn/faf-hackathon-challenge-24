@@ -2,7 +2,6 @@
 import json
 
 from llm import FALLBACK
-from profanity import contains_mask
 
 _ERROR_KEY = "error"
 
@@ -55,7 +54,9 @@ def summarize_conversation(messages: list[dict]) -> dict:
         role = m.get("role")
         if role == "user":
             turns += 1
-            if contains_mask(m.get("content")):
+            # Counted only when the profanity filter actually masked a word (flag set at
+            # mask time in llm._assemble), never merely because the text contains a '*'.
+            if m.get("censored") is True:
                 censored_count += 1
         elif role == "assistant":
             calls = m.get("tool_calls")
