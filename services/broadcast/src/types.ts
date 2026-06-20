@@ -23,6 +23,7 @@ export enum EventType {
   ANNOUNCEMENT_RESORT = "announcement.resort",
 
   CROWD_UPDATE = "crowd.update",
+  PARROT_CURSED = "public.cursed",
 }
 
 export type CrowdLevel = "calm" | "moderate" | "busy" | "unknown";
@@ -41,7 +42,6 @@ export interface CrowdSnapshot {
   generated_at: string;
   game_time: number | null;
   zones: ZoneCrowd[];
-  PARROT_CURSED = "public.cursed",
 }
 
 // Wire shape streamed to SSE clients. Matches the frontend BroadcastEventSchema
