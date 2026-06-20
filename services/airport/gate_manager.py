@@ -67,11 +67,12 @@ class Gate:
                     db.session.commit()
 
             real_delay = self.processing_time / GAME_SPEED
-            started_at = game_now()
             time.sleep(real_delay)
 
             processed_at = game_now()
-            wait_time = processed_at - started_at
+            # Total wait is from joining the queue until processed, not just the
+            # processing slice — consistent with the in-queue metric in routes.py.
+            wait_time = processed_at - guest["queued_at"]
             guest["status"] = "processed"
             guest["processed_at"] = processed_at
             guest["wait_time_seconds"] = wait_time
