@@ -1,0 +1,126 @@
+# Purrlington Island — full multi-service stack.
+#
+#   cp .env.example .env      # then fill in LLM_API_KEY (parrot) at minimum
+#   docker compose up --build
+#
+# Frontend:  http://localhost:5173      Gateway API:  http://localhost:8000
+#
+# Service hostnames below (airport, hotel, beach, parrot, parrot-b, broadcast,
+# postgres) match the *_SERVICE_URL values in .env.example, so the gateway and
+# services find each other over the default compose network with no extra config.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      # Beach DB is created automatically; the hotel DB is created by the init script below.
+      POSTGRES_DB: ${DB_NAME:-beach}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Both scripts run against POSTGRES_DB (beach). CREATE DATABASE works from any connection;
+      # the activity seed lands in the beach DB, which is exactly where the beach service reads it.
+      - ./docker/postgres-init/00-create-hotel.sql:/docker-entrypoint-initdb.d/00-create-hotel.sql:ro
+      - ./services/beach/db/init/seed_activities.sql:/docker-entrypoint-initdb.d/10-seed_activities.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-beach}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "5432:5432"
+
+  broadcast:
+    build: ./services/broadcast
+    env_file: .env
+    environment:
+      PORT: 3002
+    expose:
+      - "3002"
+
+  airport:
+    build: ./services/airport
+    env_file: .env
+    environment:
+      PORT: 3001
+    depends_on:
+      - broadcast
+    expose:
+      - "3001"
+
+  hotel:
+    build: ./services/hotel
+    env_file: .env
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/hotel
+    depends_on:
+      postgres:
+        condition: service_healthy
+      broadcast:
+        condition: service_started
+    expose:
+      - "3000"
+
+  beach:
+    build: ./services/beach
+    env_file: .env
+    environment:
+      APP_PORT: 8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - "8080"
+
+  parrot:
+    build: ./services/parrot
+    image: purrlington/parrot
+    env_file: .env
+    environment:
+      PORT: 3003
+    depends_on:
+      - airport
+      - hotel
+    expose:
+      - "3003"
+
+  # Second parrot instance — the gateway round-robins the PARROT_SERVICE_URL pool
+  # (http://parrot:3003,http://parrot-b:3003). Reuses the image built for `parrot`.
+  parrot-b:
+    image: purrlington/parrot
+    env_file: .env
+    environment:
+      PORT: 3003
+    depends_on:
+      - parrot
+    expose:
+      - "3003"
+
+  gateway:
+    build: ./gateway
+    env_file: .env
+    environment:
+      PORT: 8000
+      # Not present in .env.example; the gateway defaults it to empty, so set it here.
+      BEACH_SERVICE_URL: http://beach:8080
+    depends_on:
+      - airport
+      - hotel
+      - beach
+      - parrot
+      - broadcast
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build: ./frontend
+    env_file: .env
+    depends_on:
+      - gateway
+    ports:
+      - "5173:5173"
+
+volumes:
+  pgdata:

@@ -75,6 +75,23 @@ data for its answers.
     └── broadcast/       Express SSE event hub
 ```
 
+## Running with Docker
+
+The whole island runs as a multi-container stack via Docker Compose — each service has its
+own `Dockerfile`, wired together by [`docker-compose.yml`](docker-compose.yml).
+
+```bash
+cp .env.example .env      # then set LLM_API_KEY (parrot) at minimum
+docker compose up --build
+```
+
+- **Frontend:** http://localhost:5173
+- **Gateway API:** http://localhost:8000
+
+A single Postgres container backs both the hotel and beach services (separate `hotel` and
+`beach` databases, created automatically on first start). The two parrot instances
+(`parrot`, `parrot-b`) share one image and are round-robined by the gateway.
+
 ## Simulation model
 
 The island shares one accelerated clock across all services, configured via environment variables
