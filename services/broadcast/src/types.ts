@@ -19,6 +19,8 @@ export enum EventType {
   BEACH_AVAILABLE = "beach.activity_available",
 
   PUBLIC_ANNOUNCEMENT = "public.announcement",
+
+  ANNOUNCEMENT_RESORT = "announcement.resort",
 }
 
 // Wire shape streamed to SSE clients. Matches the frontend BroadcastEventSchema
