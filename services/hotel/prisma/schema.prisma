@@ -36,4 +36,14 @@ model Reservation {
   check_out_day Int
   status        ReservationStatus @default(CONFIRMED)
   room          Room              @relation(fields: [room_id], references: [id])
+  party         ReservationGuest[]
+}
+
+model ReservationGuest {
+  id             String      @id @default(uuid())
+  reservation_id String
+  guest_id       String
+  reservation    Reservation @relation(fields: [reservation_id], references: [id])
+
+  @@unique([reservation_id, guest_id])
 }

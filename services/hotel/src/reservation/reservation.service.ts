@@ -59,6 +59,7 @@ export class ReservationService {
       room_id: reservation.room_id,
       room_type: roomType,
       guest_count: reservation.guest_count,
+      party_guest_ids: createReservationDto.party_guest_ids,
       check_in_day: reservation.check_in_day,
       check_out_day: reservation.check_out_day,
       status: reservation.status,
@@ -84,8 +85,10 @@ export class ReservationService {
               orderBy: { id: 'asc' },
             });
 
+            const partySize = dto.party_guest_ids.length;
+
             const maxCapacity = Math.max(...rooms.map((room) => room.capacity));
-            if (dto.guest_count > maxCapacity) {
+            if (partySize > maxCapacity) {
               throw new HttpException(
                 {
                   error: `Room type ${dto.room_type} supports at most ${maxCapacity} guests`,
@@ -97,7 +100,7 @@ export class ReservationService {
             let availableRoom: (typeof rooms)[number] | null = null;
 
             for (const room of rooms) {
-              if (dto.guest_count > room.capacity) {
+              if (partySize > room.capacity) {
                 continue;
               }
 
@@ -133,6 +136,11 @@ export class ReservationService {
                 check_in_day: dto.check_in_day,
                 check_out_day: dto.check_out_day,
                 status: ReservationStatus.CONFIRMED,
+                party: {
+                  create: dto.party_guest_ids.map((guestId) => ({
+                    guest_id: guestId,
+                  })),
+                },
               },
             });
 
@@ -171,7 +179,7 @@ export class ReservationService {
   async findById(id: string): Promise<ReservationResponseDto> {
     const reservation = await this.prisma.reservation.findUnique({
       where: { id },
-      include: { room: true },
+      include: { room: true, party: true },
     });
 
     if (!reservation) {
@@ -187,6 +195,7 @@ export class ReservationService {
       room_id: reservation.room_id,
       room_type: reservation.room.type,
       guest_count: reservation.guest_count,
+      party_guest_ids: reservation.party.map((p) => p.guest_id),
       check_in_day: reservation.check_in_day,
       check_out_day: reservation.check_out_day,
       status: reservation.status,
@@ -214,12 +223,17 @@ export class ReservationService {
     }
 
     const row = rows[0];
+    const party = await this.prisma.reservationGuest.findMany({
+      where: { reservation_id: row.id },
+    });
+
     return {
       id: row.id,
       guest_id: row.guest_id,
       room_id: row.room_id,
       room_type: row.room_type,
       guest_count: row.guest_count,
+      party_guest_ids: party.map((p) => p.guest_id),
       check_in_day: row.check_in_day,
       check_out_day: row.check_out_day,
       status: row.status,

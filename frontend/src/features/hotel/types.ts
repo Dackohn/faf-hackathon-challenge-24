@@ -38,6 +38,7 @@ export const ReservationSchema = z.object({
   room_id: z.string(),
   room_type: RoomTypeSchema,
   guest_count: z.number().int(),
+  party_guest_ids: z.array(z.string()),
   check_in_day: z.number().int(),
   check_out_day: z.number().int(),
   status: ReservationStatusSchema,
@@ -47,6 +48,7 @@ export const PostReservationRequestSchema = z.object({
   guest_id: z.string(),
   room_type: RoomTypeSchema,
   guest_count: z.number().int().min(1),
+  party_guest_ids: z.array(z.string()).min(1),
   check_in_day: z.number().int().min(0),
   check_out_day: z.number().int().min(1),
 });

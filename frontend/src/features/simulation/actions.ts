@@ -48,10 +48,14 @@ function randomReservationBody(guest: GuestProfile) {
   const today = Math.max(0, getCurrentSimulationDay());
   const checkIn = today + randomInt(0, 2);
   const roomType = sample(ROOM_TYPES);
+  const guestCount = randomInt(1, ROOM_MAX_GUESTS[roomType]);
   return {
     guest_id: guest.id,
     room_type: roomType,
-    guest_count: randomInt(1, ROOM_MAX_GUESTS[roomType]),
+    guest_count: guestCount,
+    party_guest_ids: Array.from({ length: guestCount }, (_, i) =>
+      i === 0 ? guest.id : `${guest.id}-${i + 1}`
+    ),
     check_in_day: checkIn,
     check_out_day: checkIn + randomInt(1, 3),
   };

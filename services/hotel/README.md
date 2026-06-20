@@ -86,10 +86,13 @@ curl -X POST http://localhost:3000/reservation \
     "guest_id": "guest-kiki-0001",
     "room_type": "SUITE",
     "guest_count": 2,
+    "party_guest_ids": ["guest-kiki-0001", "guest-kiki-0002"],
     "check_in_day": 1,
     "check_out_day": 4
   }'
 ```
+
+`party_guest_ids` lists every guest in the booking party and is what capacity is validated against; `guest_count` is kept for testing and is not used for capacity checks.
 
 Reservation responses include:
 
@@ -100,6 +103,7 @@ Reservation responses include:
   "room_id": "room-suite-01",
   "room_type": "SUITE",
   "guest_count": 2,
+  "party_guest_ids": ["guest-kiki-0001", "guest-kiki-0002"],
   "check_in_day": 1,
   "check_out_day": 4,
   "status": "CONFIRMED"
