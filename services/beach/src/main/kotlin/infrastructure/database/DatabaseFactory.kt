@@ -42,5 +42,7 @@ object DatabaseFactory {
 
             SchemaUtils.create(ActivityTable, VisitorsTable)
         }
+
+        ActivitySeeder.seedIfEmpty()
     }
 }
