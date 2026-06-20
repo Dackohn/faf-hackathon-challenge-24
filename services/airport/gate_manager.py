@@ -217,11 +217,15 @@ class GateManager:
                     queue_snapshot.append({**cp, "position": 0, "wait_time_seconds": now - cp["queued_at"]})
                 for i, g in enumerate(gate.queue):
                     queue_snapshot.append({**g, "position": i + 1, "wait_time_seconds": now - g["queued_at"]})
-                total_queued += len(gate.queue)
+            # Single source of truth: every guest present at the gate lives in queue_snapshot
+            # (the one being processed at position 0, plus everyone waiting). queue_size and
+            # total_queued both derive from it, so they can't drift apart.
+            queue_size = len(queue_snapshot)
+            total_queued += queue_size
             gates_list.append({
                 "gate_id": gate.gate_id,
                 "gate_type": gate.gate_type,
-                "queue_size": len(queue_snapshot),
+                "queue_size": queue_size,
                 "queue": queue_snapshot,
             })
         return {
