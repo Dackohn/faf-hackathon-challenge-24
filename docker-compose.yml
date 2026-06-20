@@ -81,9 +81,9 @@ services:
   beach:
     build: ./services/beach
     ports:
-      - "8080:8080"
+      - "8090:8090"
     environment:
-      APP_PORT: 8080
+      APP_PORT: 8090
       JDBC_URL: jdbc:postgresql://postgres:5432/beach
       DB_USER: postgres
       DB_PASSWORD: postgres
@@ -111,10 +111,13 @@ services:
       LLM_TOP_P: ${LLM_TOP_P:-1.0}
       AIRPORT_SERVICE_URL: http://airport:3001
       HOTEL_SERVICE_URL: http://hotel:3000
+      BEACH_SERVICE_URL: http://beach:8090
+      BROADCAST_SERVICE_URL: http://broadcast:3002
       INTERNAL_SECRET: ${INTERNAL_SECRET:-}
     depends_on:
       - airport
       - hotel
+      - broadcast
 
   parrot-b:
     build: ./services/parrot
@@ -128,10 +131,13 @@ services:
       LLM_TOP_P: ${LLM_TOP_P:-1.0}
       AIRPORT_SERVICE_URL: http://airport:3001
       HOTEL_SERVICE_URL: http://hotel:3000
+      BEACH_SERVICE_URL: http://beach:8090
+      BROADCAST_SERVICE_URL: http://broadcast:3002
       INTERNAL_SECRET: ${INTERNAL_SECRET:-}
     depends_on:
       - airport
       - hotel
+      - broadcast
 
   # ── Dining ────────────────────────────────────────────────────────────────────
   dining:
@@ -158,7 +164,7 @@ services:
       PORT: 8000
       AIRPORT_SERVICE_URL: http://airport:3001
       HOTEL_SERVICE_URL: http://hotel:3000
-      BEACH_SERVICE_URL: http://beach:8080
+      BEACH_SERVICE_URL: http://beach:8090
       BROADCAST_SERVICE_URL: http://broadcast:3002
       PARROT_SERVICE_URL: http://parrot:3003,http://parrot-b:3003
       DINING_SERVICE_URL: http://dining:3004

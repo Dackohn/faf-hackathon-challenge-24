@@ -7,6 +7,9 @@ from services import (
     get_guest_arrival_status,
     get_guest_reservation,
     get_guest_journey_status,
+    get_guest_clearance_eta,
+    get_room_availability,
+    get_beach_activities,
 )
 
 TOOL_SCHEMAS = [
@@ -31,6 +34,22 @@ TOOL_SCHEMAS = [
         "function": {
             "name": "get_hotel_rooms",
             "description": "Get all hotel rooms with current availability, types, capacity, and pricing. Use this for any question that touches rooms, reservations, bookings, check-in/out, or how the hotel works — including general or definitional ones.",
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_room_availability",
+            "description": "Get how many hotel rooms are free right now and, when none are, the soonest game-day a room frees (soonest_free_day / days_until_free). Use this to answer 'when will a room free up?' or 'how long until a room is available?'.",
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_beach_activities",
+            "description": "Get all beach activities with their current remaining spots and capacity. Beach spots are capacity-based with no schedule, so this gives current availability — it cannot tell you WHEN a full activity will free a spot (that only happens if someone cancels).",
             "parameters": {"type": "object", "properties": {}, "required": []},
         },
     },
@@ -79,21 +98,39 @@ GUEST_TOOL_SCHEMAS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_guest_clearance_eta",
+            "description": "Estimate how long until the current guest clears passport control: returns estimated_seconds_until_cleared (game-seconds, 0 if already processed, null if it cannot be determined). Use this to answer 'how long until I clear passport control?' or 'when will I be through?'.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "guest_id": {"type": "string", "description": "The guest ID to look up, e.g. guest-kiki-0001"},
+                },
+                "required": ["guest_id"],
+            },
+        },
+    },
 ]
 
 _DISPATCH = {
     "get_airport_stats": lambda **_: get_airport_stats(),
     "get_airport_queue_status": lambda **_: get_airport_queue_status(),
     "get_hotel_rooms": lambda **_: get_hotel_rooms(),
+    "get_room_availability": lambda **_: get_room_availability(),
+    "get_beach_activities": lambda **_: get_beach_activities(),
     "get_guest_arrival_status": lambda *, guest_id, **_: get_guest_arrival_status(guest_id),
     "get_guest_reservation": lambda *, guest_id, **_: get_guest_reservation(guest_id),
     "get_guest_journey_status": lambda *, guest_id, **_: get_guest_journey_status(guest_id),
+    "get_guest_clearance_eta": lambda *, guest_id, **_: get_guest_clearance_eta(guest_id),
 }
 
 # Tools that expose a single guest's private data. Their guest_id must be the
 # authenticated caller's, never a value the model picked.
 GUEST_SCOPED_TOOLS = frozenset(
-    {"get_guest_arrival_status", "get_guest_reservation", "get_guest_journey_status"}
+    {"get_guest_arrival_status", "get_guest_reservation", "get_guest_journey_status",
+     "get_guest_clearance_eta"}
 )
 
 async def execute_tool(name: str, arguments: dict, allowed_guest_id: str | None) -> str:
