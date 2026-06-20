@@ -1,4 +1,4 @@
-import { api } from "@/lib/api-client";
+import { api, ApiRequestError } from "@/lib/api-client";
 import {
   ReservationSchema,
   RoomsResponseSchema,
@@ -19,8 +19,20 @@ export function postReservation(
   return api.hotel.post(ReservationSchema, "/reservation", body);
 }
 
-export function getReservationByGuest(guestId: string): Promise<Reservation> {
-  return api.hotel.get(ReservationSchema, `/reservation/by-guest/${guestId}`);
+export async function getReservationByGuest(
+  guestId: string
+): Promise<Reservation | null> {
+  try {
+    return await api.hotel.get(
+      ReservationSchema,
+      `/reservation/by-guest/${guestId}`
+    );
+  } catch (err) {
+    if (err instanceof ApiRequestError && err.status === 404) {
+      return null;
+    }
+    throw err;
+  }
 }
 
 export function cancelReservation(

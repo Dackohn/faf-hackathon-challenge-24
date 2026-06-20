@@ -209,7 +209,7 @@ export class ReservationService {
                rm.type AS room_type
         FROM "Reservation" r
         JOIN "Room" rm ON rm.id = r.room_id
-        WHERE r.guest_id = ${guestId}
+        WHERE r.guest_id = ${guestId} AND r.status != ${ReservationStatus.CANCELLED}::"ReservationStatus"
         ORDER BY r.check_in_day DESC
         LIMIT 1
       `,
