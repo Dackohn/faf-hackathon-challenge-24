@@ -64,3 +64,17 @@ def mask_profanity(text: str) -> str:
 def contains_mask(text) -> bool:
     """True if text carries a profanity mask produced by mask_profanity."""
     return bool(text) and MASK_CHAR in text
+
+
+def find_triggered_words(text: str) -> list[str]:
+    """Return the distinct matched profane tokens (as they appear in the text, lowercased)."""
+    if not text:
+        return []
+    seen: set[str] = set()
+    result: list[str] = []
+    for m in _PATTERN.finditer(text):
+        key = m.group(0).lower()
+        if key not in seen:
+            seen.add(key)
+            result.append(key)
+    return result

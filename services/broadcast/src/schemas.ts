@@ -175,3 +175,22 @@ export function parseAnnouncement(raw: unknown): AnnouncementBody {
   const body = asBody(raw);
   return { message: requireString(body, "message") };
 }
+
+// ── Parrot /cursed ────────────────────────────────────────────────────────────
+
+export interface ParrotCursedBody {
+  guest_id: string;
+  message: string;
+  triggered_word: string[];
+}
+
+export function parseParrotCursed(raw: unknown): ParrotCursedBody {
+  const body = asBody(raw);
+  const guest_id = requireString(body, "guest_id");
+  const message = requireString(body, "message");
+  const tw = body["triggered_word"];
+  if (!Array.isArray(tw) || tw.length === 0 || tw.some((w) => typeof w !== "string")) {
+    throw new ValidationError('"triggered_word" must be a non-empty array of strings');
+  }
+  return { guest_id, message, triggered_word: tw as string[] };
+}
