@@ -1,21 +1,20 @@
 import { Router } from "express";
 import { v4 as uuid } from "uuid";
 import { broadcast } from "../eventBus.js";
-import { EventType } from "../types.js";
+import { ChannelId, EventType } from "../types.js";
 
 const router = Router();
 
 router.post("/full", (req, res) => {
-  const { body } = req.body;
+  const { message, sender, data } = req.body ?? {};
 
   broadcast({
     id: uuid(),
-    type: EventType.BEACH_FULL,
-    timestamp: new Date().toISOString(),
-    source: "beach",
-    payload: {
-      body
-    },
+    channel: ChannelId.Beach,
+    event_type: EventType.BEACH_FULL,
+    message: message ?? "A beach activity is now full.",
+    sender: sender ?? "beach-service",
+    data: data ?? {},
   });
 
   res.json({
@@ -24,16 +23,15 @@ router.post("/full", (req, res) => {
 });
 
 router.post("/available", (req, res) => {
-  const { body } = req.body;
+  const { message, sender, data } = req.body ?? {};
 
   broadcast({
     id: uuid(),
-    type: EventType.BEACH_FULL,
-    timestamp: new Date().toISOString(),
-    source: "beach",
-    payload: {
-      body
-    },
+    channel: ChannelId.Beach,
+    event_type: EventType.BEACH_AVAILABLE,
+    message: message ?? "A beach activity has spots available again.",
+    sender: sender ?? "beach-service",
+    data: data ?? {},
   });
 
   res.json({
