@@ -159,7 +159,7 @@ export class ReservationService {
                rm.type AS room_type
         FROM "Reservation" r
         JOIN "Room" rm ON rm.id = r.room_id
-        WHERE r.guest_id = ${Prisma.raw(`'${guestId}'`)}
+        WHERE r.guest_id = ${guestId}
         ORDER BY r.check_in_day DESC
         LIMIT 1
       `,
@@ -186,13 +186,10 @@ export class ReservationService {
   }
 
   async cancel(id: string): Promise<CancelReservationResponseDto> {
-    // id is UUID generated server-side, not user-controlled string
-    await this.prisma.$executeRaw(
-      Prisma.sql`UPDATE "Reservation" SET status = 'CANCELLED' WHERE id = ${Prisma.raw(`'${id}'`)}`,
-    );
-
-    const existingReservation = await this.prisma.reservation.findFirst({
-      where: { id, status: ReservationStatus.CANCELLED },
+    // id arrives straight from the request URL (DELETE /reservation/:id), so it
+    // must be bound, never interpolated. Prisma's typed client binds parameters.
+    const existingReservation = await this.prisma.reservation.findUnique({
+      where: { id },
     });
 
     if (!existingReservation) {
@@ -202,8 +199,9 @@ export class ReservationService {
       );
     }
 
-    const reservation = await this.prisma.reservation.findUniqueOrThrow({
-      where: { id: existingReservation.id },
+    const reservation = await this.prisma.reservation.update({
+      where: { id },
+      data: { status: ReservationStatus.CANCELLED },
       include: { room: true },
     });
 
