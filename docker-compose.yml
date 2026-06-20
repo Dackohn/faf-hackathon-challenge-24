@@ -28,6 +28,7 @@ services:
       BEACH_TOKEN: ${BEACH_TOKEN:-}
       PARROT_TOKEN: ${PARROT_TOKEN:-}
       FE_TOKEN: ${FE_TOKEN:-}
+      ADMIN_PASSCODE: ${VITE_ADMIN_PASSCODE:-}
 
   # ── Airport ───────────────────────────────────────────────────────────────────
   airport:
