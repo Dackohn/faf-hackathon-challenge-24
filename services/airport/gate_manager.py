@@ -235,13 +235,21 @@ class GateManager:
 
             with gate.lock:
                 position = gate.enqueue(guest)
+                # Rough wait estimate in game-seconds. Everyone processed before this guest
+                # finishes: the guest in the chair (if any, counted as a full slot since we
+                # don't track partial progress) + those ahead in the queue + this guest. Times
+                # the gate's per-guest processing time. Mirrors wait_time_seconds (queued -> processed).
+                guests_before = (position - 1) + (1 if gate.currently_processing else 0)
+                estimated_wait_seconds = (guests_before + 1) * gate.processing_time
+                queue_size = len(gate.queue)
 
         return {
             "guest_id": guest["guest_id"],
             "gate": gate.gate_id,
             "position": position,
-            "queue_size": len(gate.queue),
+            "queue_size": queue_size,
             "queued_at": guest["queued_at"],
+            "estimated_wait_seconds": estimated_wait_seconds,
         }
 
     def get_guest(self, guest_id: str) -> dict | None:
@@ -274,11 +282,15 @@ class GateManager:
                     queue_snapshot.append({**cp, "position": 0, "wait_time_seconds": now - cp["queued_at"]})
                 for i, g in enumerate(gate.queue):
                     queue_snapshot.append({**g, "position": i + 1, "wait_time_seconds": now - g["queued_at"]})
-                total_queued += len(gate.queue)
+            # Single source of truth: every guest present at the gate lives in queue_snapshot
+            # (the one being processed at position 0, plus everyone waiting). queue_size and
+            # total_queued both derive from it, so they can't drift apart.
+            queue_size = len(queue_snapshot)
+            total_queued += queue_size
             gates_list.append({
                 "gate_id": gate.gate_id,
                 "gate_type": gate.gate_type,
-                "queue_size": len(queue_snapshot),
+                "queue_size": queue_size,
                 "queue": queue_snapshot,
             })
         return {
