@@ -4,7 +4,7 @@ import { env } from "@/config/env";
 
 const GAME_SPEED = env.gameSpeed;
 
-const anchor = new Date("2026-06-19T09:00:00Z");
+const anchor = new Date(env.simulationStartTime);
 
 export function getCurrentSimulationDay(): number {
   const elapsedRealSeconds = (Date.now() - anchor.getTime()) / 1000;

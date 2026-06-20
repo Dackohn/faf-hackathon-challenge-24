@@ -29,6 +29,13 @@ services:
       PARROT_TOKEN: ${PARROT_TOKEN:-}
       FE_TOKEN: ${FE_TOKEN:-}
       ADMIN_PASSCODE: ${VITE_ADMIN_PASSCODE:-}
+      AIRPORT_SERVICE_URL: http://airport:3001
+      HOTEL_SERVICE_URL: http://hotel:3000
+      BEACH_SERVICE_URL: http://beach:8080
+      CROWD_POLL_INTERVAL_MS: ${CROWD_POLL_INTERVAL_MS:-5000}
+      CROWD_CALM_MAX: ${CROWD_CALM_MAX:-0.34}
+      CROWD_BUSY_MIN: ${CROWD_BUSY_MIN:-0.67}
+      AIRPORT_QUEUE_SOFT_CAP: ${AIRPORT_QUEUE_SOFT_CAP:-10}
 
   # ── Airport ───────────────────────────────────────────────────────────────────
   airport:

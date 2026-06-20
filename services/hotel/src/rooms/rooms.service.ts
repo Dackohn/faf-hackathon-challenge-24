@@ -42,7 +42,7 @@ export class RoomsService {
         type: room.type,
         capacity: room.capacity,
         price_per_night: room.price_per_night,
-        current_guests: currentGuestsByRoomId.get(room.id) ?? 0,
+        occupancy: currentGuestsByRoomId.get(room.id) ?? 0,
       })),
     };
   }
