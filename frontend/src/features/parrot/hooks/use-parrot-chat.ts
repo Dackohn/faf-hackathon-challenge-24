@@ -153,7 +153,7 @@ export function useParrotChat() {
     const trimmed = message.trim();
     if (!participantId || !trimmed || mutation.isPending) return;
 
-    const localId = crypto.randomUUID();
+    const localId = (crypto.randomUUID?.() ?? Math.random().toString(36).slice(2));
 
     setFailedTurn(null);
     setPendingTurn({
