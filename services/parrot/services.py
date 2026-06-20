@@ -56,6 +56,27 @@ async def get_guest_arrival_status(guest_id: str) -> str:
     return json.dumps(r.json())
 
 
+async def get_guest_clearance_eta(guest_id: str) -> str:
+    """Estimated game-seconds until the guest clears passport control."""
+    r = await _get_client().get(f"{settings.airport_service_url}/arrivals/{guest_id}/eta", headers=_hdrs())
+    r.raise_for_status()
+    return json.dumps(r.json())
+
+
+async def get_room_availability() -> str:
+    """Rooms free now and, when full, the soonest game-day a room frees."""
+    r = await _get_client().get(f"{settings.hotel_service_url}/rooms/availability", headers=_hdrs())
+    r.raise_for_status()
+    return json.dumps(r.json())
+
+
+async def get_beach_activities() -> str:
+    """All beach activities with current remaining spots (capacity-based, no schedule)."""
+    r = await _get_client().get(f"{settings.beach_service_url}/activities", headers=_hdrs())
+    r.raise_for_status()
+    return json.dumps(r.json())
+
+
 async def get_guest_reservation(guest_id: str) -> str:
     r = await _get_client().get(f"{settings.hotel_service_url}/reservation/by-guest/{guest_id}", headers=_hdrs())
     r.raise_for_status()

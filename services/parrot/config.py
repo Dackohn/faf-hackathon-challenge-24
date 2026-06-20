@@ -28,6 +28,7 @@ class Settings(BaseSettings):
 
     airport_service_url: str = "http://localhost:3001"
     hotel_service_url: str = "http://localhost:3000"
+    beach_service_url: str = "http://localhost:8090"
     broadcast_service_url: str = ""
     internal_secret: str = ""
 
