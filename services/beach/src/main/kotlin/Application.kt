@@ -19,6 +19,7 @@ fun Application.module() {
 
     val broadcastUrl = System.getenv("BROADCAST_SERVICE_URL")
     if (!broadcastUrl.isNullOrBlank()) {
-        BroadcastListener(broadcastUrl, PostgresVisitorRepository()).startInBackground()
+        val beachToken = System.getenv("BEACH_TOKEN")
+        BroadcastListener(broadcastUrl, PostgresVisitorRepository(), beachToken).startInBackground()
     }
 }

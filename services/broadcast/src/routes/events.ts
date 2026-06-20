@@ -1,5 +1,9 @@
 import { Router } from "express";
 import { addClient, removeClient } from "../eventBus.js";
+import { buildTokenMap, resolveAllowedPrefixes } from "../access-policy.js";
+
+// Built once at module load; env vars are fixed before listen() is called.
+const TOKEN_MAP = buildTokenMap();
 
 const router = Router();
 
@@ -10,10 +14,12 @@ router.get("/", (req, res) => {
   res.setHeader("X-Accel-Buffering", "no");
   res.flushHeaders();
 
-  // Open the stream right away and suggest a reconnect delay to the client.
   res.write("retry: 3000\n\n");
 
-  addClient(res);
+  const serviceToken = req.headers["x-service-token"] as string | undefined;
+  const allowedPrefixes = resolveAllowedPrefixes(serviceToken, TOKEN_MAP);
+
+  addClient(res, allowedPrefixes);
 
   req.on("close", () => {
     removeClient(res);

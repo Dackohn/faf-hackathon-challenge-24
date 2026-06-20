@@ -20,7 +20,8 @@ private val json = Json { ignoreUnknownKeys = true }
 // check-in gate reflects real hotel state without polling.
 class BroadcastListener(
     private val broadcastUrl: String,
-    private val visitorRepository: VisitorRepository
+    private val visitorRepository: VisitorRepository,
+    private val serviceToken: String? = null
 ) {
 
     private val http = HttpClient.newBuilder()
@@ -48,11 +49,15 @@ class BroadcastListener(
     }
 
     private fun connect() {
-        val request = HttpRequest.newBuilder()
+        val builder = HttpRequest.newBuilder()
             .uri(URI.create("$broadcastUrl/events/"))
             .header("Accept", "text/event-stream")
-            .GET()
-            .build()
+
+        if (!serviceToken.isNullOrBlank()) {
+            builder.header("X-Service-Token", serviceToken)
+        }
+
+        val request = builder.GET().build()
 
         val body = http.send(request, HttpResponse.BodyHandlers.ofLines())
 
