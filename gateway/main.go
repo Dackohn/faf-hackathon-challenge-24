@@ -24,8 +24,12 @@ func main() {
 	r.Use(RequestLogger)
 	r.Use(chimw.Recoverer)
 	r.Use(CORSMiddleware(cfg.CORSOrigins))
+	r.Use(MetricsMiddleware)
 	rl := NewRateLimiter(cfg.RateLimitPerWindow, cfg.RateLimitWindow)
 	r.Use(RateLimitMiddleware(rl))
+
+	// Prometheus metrics — no auth, scrape-only endpoint.
+	r.Get("/metrics", MetricsHandler().ServeHTTP)
 
 	// Health check (aggregates all backend health endpoints)
 	r.Get("/health", HealthHandler(cfg))

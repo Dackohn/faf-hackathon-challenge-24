@@ -1,6 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
-
+import { registry } from "./metrics.js";
 
 import airportRoutes from "./routes/airport.js";
 import hotelRoutes from "./routes/hotel.js";
@@ -23,6 +23,12 @@ app.use(express.json());
 // Health probe for the gateway's aggregate /health check.
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
+});
+
+// Prometheus metrics endpoint.
+app.get("/metrics", async (_req, res) => {
+  res.set("Content-Type", registry.contentType);
+  res.end(await registry.metrics());
 });
 
 app.use("/events/", eventRoutes);

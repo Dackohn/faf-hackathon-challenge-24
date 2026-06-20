@@ -4,6 +4,7 @@ import time
 import uuid
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
+from prometheus_fastapi_instrumentator import Instrumentator
 from context_loader import load_context
 from services import close_client
 from history import ConversationStore
@@ -57,6 +58,8 @@ def create_app() -> FastAPI:
     app = FastAPI(title="Parrot Chat Service", lifespan=lifespan)
     app.middleware("http")(request_context)
     app.include_router(router)
+    # Exposes /metrics with per-endpoint request count, latency, and in-flight gauges.
+    Instrumentator().instrument(app).expose(app)
     return app
 
 

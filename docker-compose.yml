@@ -199,6 +199,41 @@ services:
     depends_on:
       - gateway
 
+  # ── Observability ─────────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.51.2
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=7d"
+    ports:
+      - "9090:9090"
+    depends_on:
+      - gateway
+      - airport
+      - hotel
+      - beach
+      - broadcast
+      - parrot
+
+  grafana:
+    image: grafana/grafana:10.4.2
+    volumes:
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+      - grafana_data:/var/lib/grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "3010:3000"
+    depends_on:
+      - prometheus
+
 volumes:
   postgres_data:
   airport_data:
+  prometheus_data:
+  grafana_data:
