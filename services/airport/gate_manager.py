@@ -129,8 +129,12 @@ class GateManager:
 
     def __init__(self, app, broadcast_client: BroadcastClient):
         self.app = app
+        self.broadcast_client = broadcast_client
         self.gates: dict[str, Gate] = {}
         self.assignment_lock = threading.Lock()
+        # Highest gate index ever issued per type. New gates opened at runtime take the
+        # next index so their ids stay unique even after earlier gates have been closed.
+        self._gate_counts = {"EU": EU_GATES, "ALL": ALL_GATES}
 
         eu_count = EU_GATES
         all_count = ALL_GATES
@@ -174,9 +178,25 @@ class GateManager:
         for gate in self.gates.values():
             gate.active = False
 
-    def _shortest_queue_gate(self, gate_type: str) -> Gate:
-        candidates = [g for g in self.gates.values() if g.gate_type == gate_type]
-        return min(candidates, key=lambda g: len(g.queue))
+    def _select_gate_for(self, guest: dict) -> "Gate | None":
+        """Pick the open gate a guest should queue at.
+
+        non-EU guests can only use ALL gates. EU guests prefer the shortest EU gate but
+        spill over to the shortest ALL gate when that ALL gate is strictly shorter (the
+        existing cross-type load balancing). Returns None only if no compatible gate is open.
+        """
+        eu_gates = [g for g in self.gates.values() if g.gate_type == "EU"]
+        all_gates = [g for g in self.gates.values() if g.gate_type == "ALL"]
+        shortest = lambda gs: min(gs, key=lambda g: len(g.queue)) if gs else None
+
+        all_short = shortest(all_gates)
+        if guest["passport_type"] != "EU":
+            return all_short
+
+        eu_short = shortest(eu_gates)
+        if eu_short and all_short:
+            return all_short if len(all_short.queue) < len(eu_short.queue) else eu_short
+        return eu_short or all_short
 
     def _gate_accepts(self, gate: Gate, guest: dict) -> bool:
         # ALL gates take any passport; EU gates take EU passports only.
@@ -202,15 +222,12 @@ class GateManager:
         # Select the gate and enqueue under one lock so two concurrent arrivals
         # cannot both read the same shortest gate and pile onto it (TOCTOU).
         with self.assignment_lock:
-            # Keep families together: prefer the gate where a same-surname member already is.
-            gate = self._family_gate(guest.get("surname"), guest)
-            if gate is None:
-                if guest["passport_type"] == "EU":
-                    eu_gate = self._shortest_queue_gate("EU")
-                    all_gate = self._shortest_queue_gate("ALL")
-                    gate = all_gate if len(all_gate.queue) < len(eu_gate.queue) else eu_gate
-                else:
-                    gate = self._shortest_queue_gate("ALL")
+    # family-together first, then open/close-aware shortest-gate selection
+        gate = self._family_gate(guest.get("surname"), guest)
+          if gate is None:
+            gate = self._select_gate_for(guest)
+          if gate is None:
+            raise RuntimeError("no open gate available for guest")
 
             guest["queued_at"] = game_now()
             guest["status"] = "queued"
@@ -274,7 +291,8 @@ class GateManager:
         now = game_now()
         gates_list = []
         total_queued = 0
-        for gate in self.gates.values():
+        # Snapshot the gate set: open_gate/close_gate may mutate self.gates concurrently.
+        for gate in list(self.gates.values()):
             with gate.lock:
                 queue_snapshot = []
                 cp = gate.currently_processing
@@ -298,3 +316,100 @@ class GateManager:
             "total_queued": total_queued,
             "current_game_time": now,
         }
+
+    def open_gate(self, gate_type: str | None = None, gate_id: str | None = None,
+                  processing_time: float | None = None) -> tuple[dict | None, str | None]:
+        """Open a gate at runtime so it starts accepting guests.
+
+        gate_type ("EU"/"ALL") is required for a brand-new gate; if only gate_id is given
+        the type is inferred from its prefix. With no gate_id, the next free id for the type
+        is allocated. Returns (gate_status, None) on success, or (None, error_code).
+        """
+        with self.assignment_lock:
+            if gate_id and gate_id in self.gates:
+                return None, "already_open"
+
+            if gate_type is not None:
+                gate_type = gate_type.upper()
+            elif gate_id:
+                gate_type = gate_id.split("-")[0].upper()
+            if gate_type not in ("EU", "ALL"):
+                return None, "invalid_type"
+
+            if processing_time is None:
+                processing_time = PROCESSING_TIME_EU if gate_type == "EU" else PROCESSING_TIME_ALL
+
+            if gate_id is None:
+                self._gate_counts[gate_type] += 1
+                gate_id = f"{gate_type}-{self._gate_counts[gate_type]}"
+            else:
+                # Keep the counter ahead of any explicit id so future auto-ids don't collide.
+                try:
+                    idx = int(gate_id.split("-")[1])
+                    self._gate_counts[gate_type] = max(self._gate_counts[gate_type], idx)
+                except (IndexError, ValueError):
+                    pass
+
+            gate = Gate(gate_id, gate_type, processing_time, self.app, self.broadcast_client)
+            self.gates[gate_id] = gate
+            gate.start()
+
+        return {
+            "gate_id": gate_id,
+            "gate_type": gate_type,
+            "processing_time": processing_time,
+            "queue_size": 0,
+        }, None
+
+    def close_gate(self, gate_id: str) -> tuple[dict | None, str | None]:
+        """Close a gate at runtime, re-queueing its waiting guests onto other open gates.
+
+        Refuses to close the last gate able to serve a passport type. The guest currently
+        being processed (if any) is left to finish at this gate. Returns (summary, None) on
+        success, or (None, error_code).
+        """
+        with self.assignment_lock:
+            gate = self.gates.get(gate_id)
+            if gate is None:
+                return None, "not_found"
+
+            others = [g for gid, g in self.gates.items() if gid != gate_id]
+            if not others:
+                return None, "last_gate"
+            # non-EU guests can ONLY use ALL gates, so the last ALL gate must stay open.
+            if gate.gate_type == "ALL" and not any(g.gate_type == "ALL" for g in others):
+                return None, "last_all_gate"
+
+            # Stop the worker and take the waiting guests under the gate lock so the worker
+            # cannot pop one out from under us mid-drain.
+            with gate.lock:
+                gate.active = False
+                displaced = list(gate.queue)
+                gate.queue.clear()
+
+            # Remove from the active set: no longer a queueing candidate, gone from /queue.
+            del self.gates[gate_id]
+
+            # Re-distribute displaced guests onto remaining open, compatible gates. They keep
+            # their original queued_at and priority, so wait ordering is preserved.
+            reassigned = []
+            with self.app.app_context():
+                for guest in displaced:
+                    target = self._select_gate_for(guest)
+                    if target is None:
+                        # Guarded against above; skip defensively rather than lose the guest.
+                        continue
+                    guest["gate"] = target.gate_id
+                    arrival = db.session.get(Arrival, guest["arrival_id"])
+                    if arrival:
+                        arrival.gate = target.gate_id
+                    with target.lock:
+                        target.enqueue(guest)
+                    reassigned.append({"guest_id": guest["guest_id"], "gate": target.gate_id})
+                db.session.commit()
+
+        return {
+            "closed": gate_id,
+            "reassigned_count": len(reassigned),
+            "reassigned": reassigned,
+        }, None
