@@ -6,6 +6,7 @@ from config import EU_GATES, ALL_GATES, PROCESSING_TIME_EU, PROCESSING_TIME_ALL
 from schemas import ArrivalSchema
 from game_time import game_now, GAME_SPEED
 from broadcast import BroadcastClient
+from metrics import gate_queue_depth, arrivals_processed, processing_duration
 
 _arrival_schema = ArrivalSchema()
 
@@ -120,6 +121,10 @@ class Gate:
 
             for member in group:
                 self.broadcast.publish_event(member)
+                arrivals_processed.inc()
+                processing_duration.labels(gate=self.gate_id).observe(real_delay)
+
+            gate_queue_depth.labels(gate=self.gate_id).set(len(self.queue))
 
             with self.lock:
                 self.currently_processing = None

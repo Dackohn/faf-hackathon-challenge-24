@@ -8,6 +8,7 @@ import {
 import { AirportService } from '../airport/airport.service';
 import { BroadcastService } from '../broadcast/broadcast.service';
 import { HotelBroadcastEventType } from '../broadcast/hotel-events';
+import { reservationsTotal } from '../metrics/metrics';
 import { PrismaService } from '../prisma/prisma.service';
 import { CancelReservationResponseDto } from './dto/cancel-reservation-response.dto';
 import { CreateReservationDto } from './dto/create-reservation.dto';
@@ -52,6 +53,7 @@ export class ReservationService {
         check_out_day: reservation.check_out_day,
       },
     );
+    reservationsTotal.inc({ status: 'confirmed' });
 
     return {
       id: reservation.id,
@@ -279,6 +281,7 @@ export class ReservationService {
         check_out_day: reservation.check_out_day,
       },
     );
+    reservationsTotal.inc({ status: 'cancelled' });
 
     return {
       id: reservation.id,

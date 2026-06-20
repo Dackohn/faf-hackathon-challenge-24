@@ -57,6 +57,10 @@ dependencies {
     implementation("org.postgresql:postgresql:42.7.3")
     implementation("com.zaxxer:HikariCP:5.1.0")
 
+    // Metrics
+    implementation("io.ktor:ktor-server-metrics-micrometer-jvm:2.3.12")
+    implementation("io.micrometer:micrometer-registry-prometheus:1.12.5")
+
     // Tests
     testImplementation(kotlin("test"))
     testImplementation("io.ktor:ktor-server-test-host-jvm:2.3.12")

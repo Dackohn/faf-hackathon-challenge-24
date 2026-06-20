@@ -10,6 +10,7 @@ from profanity import mask_profanity, find_triggered_words
 from pii import make_pseudonymizer, Pseudonymizer, StreamRestorer
 from tools import TOOL_SCHEMAS, GUEST_TOOL_SCHEMAS, execute_tool
 from tracing import request_id_ctx
+from parrot_metrics import llm_request_duration, tool_calls_total, chat_requests_total, cursed_notifications_total
 
 if TYPE_CHECKING:
     from history import ConversationStore
@@ -170,9 +171,11 @@ async def _run_one_tool(call: dict, guest_id: str | None, pseudo: Pseudonymizer 
         arguments = {}
     t0 = time.perf_counter()
     result = await execute_tool(name, arguments, guest_id)
+    elapsed = time.perf_counter() - t0
+    tool_calls_total.labels(tool=name).inc()
     logger.info(
         "rid=%s tool=%s dur_ms=%.1f args=%s -> %s",
-        request_id_ctx.get(), name, (time.perf_counter() - t0) * 1000, arguments, result[:200],
+        request_id_ctx.get(), name, elapsed * 1000, arguments, result[:200],
     )
     if pseudo:
         result = pseudo.redact_data(result)
@@ -189,9 +192,11 @@ async def chat(
     context: str,
     history: list[dict] | None = None,
 ) -> tuple[str, list[dict]]:
+    chat_requests_total.labels(path="/chat").inc()
     pseudo = make_pseudonymizer(guest_id)
     triggered = find_triggered_words(message)
     if triggered:
+        cursed_notifications_total.inc()
         asyncio.ensure_future(
             broadcast_client.notify_cursed(guest_id or "anonymous", message, triggered)
         )
@@ -200,12 +205,14 @@ async def chat(
     client = get_client()
 
     for _ in range(MAX_TOOL_ROUNDS):
+        _t0 = time.perf_counter()
         response = await client.chat.completions.create(
             model=settings.llm_model,
             messages=messages,
             tools=tools if tools else None,
             **_llm_params(),
         )
+        llm_request_duration.observe(time.perf_counter() - _t0)
         choice = response.choices[0]
 
         if choice.finish_reason == "tool_calls" or choice.message.tool_calls:
@@ -246,10 +253,12 @@ async def chat_stream(
     outside the endpoint's context) so downstream calls and tool logs carry the correlation id.
     History is persisted in `finally`, so an early client disconnect still saves the turn.
     """
+    chat_requests_total.labels(path="/chat/stream").inc()
     request_id_ctx.set(request_id)
     pseudo = make_pseudonymizer(guest_id)
     triggered = find_triggered_words(message)
     if triggered:
+        cursed_notifications_total.inc()
         asyncio.ensure_future(
             broadcast_client.notify_cursed(guest_id or "anonymous", message, triggered)
         )

@@ -173,6 +173,7 @@ services:
       GATEWAY_CACHE_TTL: ${GATEWAY_CACHE_TTL:-0}
       GATEWAY_RATE_LIMIT: ${GATEWAY_RATE_LIMIT:-0}
       GATEWAY_RATE_WINDOW: ${GATEWAY_RATE_WINDOW:-1m}
+      PROMETHEUS_SERVICE_URL: http://prometheus:9090
     depends_on:
       - airport
       - hotel
@@ -199,6 +200,27 @@ services:
     depends_on:
       - gateway
 
+  # ── Observability ─────────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.51.2
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=7d"
+    ports:
+      - "9090:9090"
+    depends_on:
+      - gateway
+      - airport
+      - hotel
+      - beach
+      - broadcast
+      - parrot
+
 volumes:
   postgres_data:
   airport_data:
+  prometheus_data:

@@ -1,0 +1,28 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: gateway
+    static_configs:
+      - targets: ["gateway:8000"]
+
+  - job_name: airport
+    static_configs:
+      - targets: ["airport:3001"]
+
+  - job_name: hotel
+    static_configs:
+      - targets: ["hotel:3000"]
+
+  - job_name: beach
+    static_configs:
+      - targets: ["beach:8090"]
+
+  - job_name: broadcast
+    static_configs:
+      - targets: ["broadcast:3002"]
+
+  - job_name: parrot
+    static_configs:
+      - targets: ["parrot:3003", "parrot-b:3003"]

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { BroadcastModule } from './broadcast/broadcast.module';
+import { MetricsModule } from './metrics/metrics.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { SimulationModule } from './simulation/simulation.module';
 import { RoomsModule } from './rooms/rooms.module';
@@ -9,6 +10,7 @@ import { HealthController } from './health/health.controller';
 @Module({
   imports: [
     BroadcastModule,
+    MetricsModule,
     PrismaModule,
     SimulationModule,
     RoomsModule,

@@ -27,8 +27,9 @@ type Config struct {
 	ParrotServicePool    []string
 	DiningServicePool    []string
 
-	CORSOrigins    []string
-	InternalSecret string
+	CORSOrigins          []string
+	InternalSecret       string
+	PrometheusServiceURL string
 
 	// Optional cache and rate-limit settings. All disabled by their zero value.
 	CacheTTL           time.Duration // GATEWAY_CACHE_TTL — response cache TTL (0 = off)
@@ -61,8 +62,9 @@ func LoadConfig() Config {
 		ParrotServicePool:    parrot,
 		DiningServicePool:    dining,
 
-		CORSOrigins:    splitEnv("CORS_ALLOWED_ORIGINS", ""),
-		InternalSecret: getEnv("INTERNAL_SECRET", ""),
+		CORSOrigins:          splitEnv("CORS_ALLOWED_ORIGINS", ""),
+		InternalSecret:       getEnv("INTERNAL_SECRET", ""),
+		PrometheusServiceURL: getEnv("PROMETHEUS_SERVICE_URL", "http://localhost:9090"),
 
 		CacheTTL:           getDurationEnv("GATEWAY_CACHE_TTL", 0),
 		RateLimitPerWindow: getIntEnv("GATEWAY_RATE_LIMIT", 0),

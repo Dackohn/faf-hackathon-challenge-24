@@ -1,4 +1,5 @@
 from flask import Flask
+from prometheus_flask_exporter import PrometheusMetrics
 from models import db
 from config import DATABASE_PATH
 from broadcast import BroadcastClient
@@ -17,6 +18,9 @@ def create_app():
     db.init_app(app)
     with app.app_context():
         db.create_all()
+
+    # Prometheus: auto-instruments all Flask endpoints; exposes /metrics.
+    PrometheusMetrics(app)
 
     # Create components
     broadcast_client = BroadcastClient()

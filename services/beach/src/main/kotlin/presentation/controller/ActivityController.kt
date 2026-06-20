@@ -7,6 +7,7 @@ import com.hackathon.summer.faf.application.usecase.BookActivityUseCase
 import com.hackathon.summer.faf.application.usecase.CancelActivityUseCase
 import com.hackathon.summer.faf.domain.repository.ActivityRepository
 import com.hackathon.summer.faf.infrastructure.broadcast.BroadcastClient
+import com.hackathon.summer.faf.plugins.beachRegistry
 import com.hackathon.summer.faf.presentation.request.CreateActivityRequest
 import com.hackathon.summer.faf.presentation.request.VisitorRequest
 import com.hackathon.summer.faf.presentation.response.ActivityDetailResponse
@@ -19,6 +20,7 @@ import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.micrometer.core.instrument.Counter
 
 
 class ActivityController(
@@ -28,6 +30,22 @@ class ActivityController(
     private val broadcastClient: BroadcastClient? = null,
     private val adminPasscode: String? = null
 ) {
+    private val bookingsTotal = Counter.builder("beach_bookings_total")
+        .description("Total activity booking attempts by outcome.")
+        .tag("outcome", "booked")
+        .register(beachRegistry)
+    private val bookingFailuresTotal = Counter.builder("beach_bookings_total")
+        .description("Total activity booking attempts by outcome.")
+        .tag("outcome", "failed")
+        .register(beachRegistry)
+    private val cancellationsTotal = Counter.builder("beach_cancellations_total")
+        .description("Total activity cancellation attempts by outcome.")
+        .tag("outcome", "cancelled")
+        .register(beachRegistry)
+    private val cancellationFailuresTotal = Counter.builder("beach_cancellations_total")
+        .description("Total activity cancellation attempts by outcome.")
+        .tag("outcome", "failed")
+        .register(beachRegistry)
 
     private fun notifyActivityStatus(activityId: String) {
         val client = broadcastClient ?: return
@@ -131,21 +149,30 @@ class ActivityController(
 
         when (result) {
             BookActivityResult.BOOKED -> {
+                bookingsTotal.increment()
                 call.respond(HttpStatusCode.OK, mapOf("status" to "booked"))
                 notifyActivityStatus(activityId)
             }
 
-            BookActivityResult.ACTIVITY_NOT_FOUND ->
+            BookActivityResult.ACTIVITY_NOT_FOUND -> {
+                bookingFailuresTotal.increment()
                 call.respond(HttpStatusCode.NotFound, ErrorResponse(ActivityErrors.ACTIVITY_NOT_FOUND))
+            }
 
-            BookActivityResult.ACTIVITY_FULL ->
+            BookActivityResult.ACTIVITY_FULL -> {
+                bookingFailuresTotal.increment()
                 call.respond(HttpStatusCode.Conflict, ErrorResponse(ActivityErrors.ACTIVITY_FULL))
+            }
 
-            BookActivityResult.ALREADY_BOOKED ->
+            BookActivityResult.ALREADY_BOOKED -> {
+                bookingFailuresTotal.increment()
                 call.respond(HttpStatusCode.Conflict, ErrorResponse(ActivityErrors.ACTIVITY_ALREADY_BOOKED))
+            }
 
-            BookActivityResult.VISITOR_NOT_CHECKED_IN ->
+            BookActivityResult.VISITOR_NOT_CHECKED_IN -> {
+                bookingFailuresTotal.increment()
                 call.respond(HttpStatusCode.Forbidden, ErrorResponse(VisitorErrors.VISITOR_NOT_CHECKED_IN))
+            }
         }
     }
 
@@ -163,15 +190,20 @@ class ActivityController(
 
         when (result) {
             CancelActivityResult.CANCELLED -> {
+                cancellationsTotal.increment()
                 call.respond(HttpStatusCode.OK, mapOf("status" to "cancelled"))
                 notifyActivityStatus(activityId)
             }
 
-            CancelActivityResult.ACTIVITY_NOT_FOUND ->
+            CancelActivityResult.ACTIVITY_NOT_FOUND -> {
+                cancellationFailuresTotal.increment()
                 call.respond(HttpStatusCode.NotFound, ErrorResponse(ActivityErrors.ACTIVITY_NOT_FOUND))
+            }
 
-            CancelActivityResult.NOT_BOOKED ->
+            CancelActivityResult.NOT_BOOKED -> {
+                cancellationFailuresTotal.increment()
                 call.respond(HttpStatusCode.Conflict, ErrorResponse(ActivityErrors.ACTIVITY_NOT_BOOKED))
+            }
         }
     }
 
