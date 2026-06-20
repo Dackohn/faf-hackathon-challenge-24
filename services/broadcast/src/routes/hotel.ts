@@ -25,7 +25,7 @@ router.post("/confirm", (req, res) => {
     message: body.payload.message,
     sender: "hotel-service",
     guest_id: body.payload.guest_id,
-    data: body.payload,
+    data: body.payload as Record<string, unknown>,
   });
 
   res.json({ success: true });
@@ -50,7 +50,7 @@ router.post("/cancel", (req, res) => {
     message: body.payload.message,
     sender: "hotel-service",
     guest_id: body.payload.guest_id,
-    data: body.payload,
+    data: body.payload as Record<string, unknown>,
   });
 
   res.json({ success: true });

@@ -25,7 +25,7 @@ router.post("/arrival", (req, res) => {
     message: body.message,
     sender: body.sender,
     guest_id: body.data.guest_id,
-    data: body.data,
+    data: body.data as Record<string, unknown>,
   });
 
   res.json({ success: true });
