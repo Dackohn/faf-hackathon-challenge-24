@@ -6,7 +6,6 @@ import {
   answerRiddle,
   getLeaderboard,
   type RiddleState,
-  type AnswerResult,
   type LeaderboardEntry,
 } from "../api/mountain-client";
 
@@ -18,7 +17,6 @@ export function MountainPanel() {
 
   const [phase, setPhase] = useState<GamePhase>("idle");
   const [riddle, setRiddle] = useState<RiddleState | null>(null);
-  const [lastResult, setLastResult] = useState<AnswerResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -42,7 +40,6 @@ export function MountainPanel() {
       const state = await startHike(guestId);
       setRiddle(state);
       setPhase("playing");
-      setLastResult(null);
     } catch {
       setFeedback({ text: "Could not reach the mountain. Try again.", ok: false });
     } finally {
@@ -57,13 +54,12 @@ export function MountainPanel() {
     setFeedback(null);
     try {
       const result = await answerRiddle(guestId, choice);
-      setLastResult(result);
 
       if (result.summited) {
         setPhase("summited");
         setSummitData({
           duration: result.duration_seconds ?? 0,
-          skipped: result.skipped ?? result.skipped_count ?? 0,
+          skipped: result.skipped_count ?? 0,
         });
         fetchLeaderboard();
         return;
@@ -93,7 +89,6 @@ export function MountainPanel() {
   function handleReset() {
     setPhase("idle");
     setRiddle(null);
-    setLastResult(null);
     setFeedback(null);
     setShowHint(false);
     setSummitData(null);
