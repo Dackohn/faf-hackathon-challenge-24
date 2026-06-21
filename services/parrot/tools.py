@@ -190,10 +190,12 @@ GUEST_SCOPED_TOOLS = frozenset(
      "get_guest_clearance_eta", "start_mountain_hike", "answer_mountain_riddle"}
 )
 
-async def execute_tool(name: str, arguments: dict, allowed_guest_id: str | None) -> str:
+async def execute_tool(name: str, arguments: dict | None, allowed_guest_id: str | None) -> str:
     fn = _DISPATCH.get(name)
     if fn is None:
         return json.dumps({"error": f"Unknown tool: {name}"})
+
+    arguments = arguments or {}
 
     if name in GUEST_SCOPED_TOOLS:
         # Never trust the model-supplied guest_id: a guest could ask the assistant

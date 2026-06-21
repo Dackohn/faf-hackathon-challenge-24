@@ -1,8 +1,15 @@
 import axios from "axios";
 import { env } from "@/config/env";
+import { useSessionStore } from "@/stores/session-store";
 
 const prometheusApi = axios.create({
   baseURL: `${env.gatewayUrl}/api/prometheus`,
+});
+
+prometheusApi.interceptors.request.use((config) => {
+  const token = useSessionStore.getState().token;
+  if (token) config.headers.set("Authorization", `Bearer ${token}`);
+  return config;
 });
 
 export interface PrometheusRangeSample {

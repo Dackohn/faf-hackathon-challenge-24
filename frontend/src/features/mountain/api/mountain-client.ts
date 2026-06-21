@@ -1,7 +1,14 @@
 import axios from "axios";
 import { env } from "@/config/env";
+import { useSessionStore } from "@/stores/session-store";
 
 const mountainApi = axios.create({ baseURL: `${env.gatewayUrl}/api/mountain` });
+
+mountainApi.interceptors.request.use((config) => {
+  const token = useSessionStore.getState().token;
+  if (token) config.headers.set("Authorization", `Bearer ${token}`);
+  return config;
+});
 
 export interface RiddleState {
   step: number;
