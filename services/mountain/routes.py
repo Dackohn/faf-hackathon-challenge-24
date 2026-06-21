@@ -36,7 +36,7 @@ async def hike_answer(req: AnswerRequest):
             notify_summit(
                 req.guest_id,
                 result.get("duration_seconds", 0),
-                result.get("skipped", result.get("total_skipped", 0)),
+                result.get("skipped_count", 0),
             )
         )
     return result

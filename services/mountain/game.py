@@ -99,7 +99,7 @@ class MountainGame:
                         "correct": True,
                         "summited": True,
                         "duration_seconds": round(duration, 1),
-                        "skipped": state.skipped,
+                        "skipped_count": state.skipped,
                         "message": "You reached the summit! The island stretches below you in all its glory.",
                     }
                 return {"correct": True, "summited": False, **self._riddle_response(state)}
@@ -120,10 +120,10 @@ class MountainGame:
                         self._leaderboard = self._leaderboard[:20]
                         return {
                             "correct": False,
-                            "skipped": True,
+                            "was_skipped": True,
                             "summited": True,
                             "duration_seconds": round(duration, 1),
-                            "total_skipped": state.skipped,
+                            "skipped_count": state.skipped,
                             "message": "The Oracle guided you past the final obstacle. You reached the summit!",
                         }
                     return {

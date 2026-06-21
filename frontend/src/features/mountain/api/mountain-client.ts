@@ -1,7 +1,7 @@
 import axios from "axios";
-import { env } from "@/lib/env";
+import { env } from "@/config/env";
 
-const api = axios.create({ baseURL: `${env.gatewayUrl}/api/mountain` });
+const mountainApi = axios.create({ baseURL: `${env.gatewayUrl}/api/mountain` });
 
 export interface RiddleState {
   step: number;
@@ -33,21 +33,21 @@ export interface LeaderboardEntry {
 }
 
 export async function startHike(guestId: string): Promise<RiddleState> {
-  const res = await api.post("/hike/start", { guest_id: guestId });
+  const res = await mountainApi.post("/hike/start", { guest_id: guestId });
   return res.data;
 }
 
 export async function answerRiddle(guestId: string, choice: number): Promise<AnswerResult> {
-  const res = await api.post("/hike/answer", { guest_id: guestId, choice });
+  const res = await mountainApi.post("/hike/answer", { guest_id: guestId, choice });
   return res.data;
 }
 
 export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
-  const res = await api.get("/hike/leaderboard");
+  const res = await mountainApi.get("/hike/leaderboard");
   return res.data.leaderboard;
 }
 
 export async function getHikeStatus(guestId: string) {
-  const res = await api.get(`/hike/status/${guestId}`);
+  const res = await mountainApi.get(`/hike/status/${guestId}`);
   return res.data;
 }
