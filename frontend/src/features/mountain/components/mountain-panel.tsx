@@ -61,21 +61,6 @@ export function MountainPanel() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [guestId]);
 
-  async function handleStart() {
-    if (!guestId) return;
-    setLoading(true);
-    setFeedback(null);
-    setShowHint(false);
-    try {
-      const state = await startHike(guestId);
-      setRiddle(state);
-      setPhase("playing");
-    } catch {
-      setFeedback({ text: "Could not reach the mountain. Try again.", ok: false });
-    } finally {
-      setLoading(false);
-    }
-  }
 
   async function handleChoice(choice: number) {
     if (!guestId || !riddle || loading) return;
