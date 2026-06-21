@@ -5,6 +5,7 @@ import {
   startHike,
   answerRiddle,
   getLeaderboard,
+  getHikeStatus,
   type RiddleState,
   type LeaderboardEntry,
 } from "../api/mountain-client";
@@ -30,6 +31,35 @@ export function MountainPanel() {
   }, []);
 
   useEffect(() => { fetchLeaderboard(); }, [fetchLeaderboard]);
+
+  // Auto-start or restore hike when the panel opens
+  useEffect(() => {
+    if (!guestId || phase !== "idle") return;
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const status = await getHikeStatus(guestId);
+        if (cancelled) return;
+        if (status.summited) {
+          setPhase("summited");
+          setSummitData({ duration: 0, skipped: status.skipped ?? 0 });
+          return;
+        }
+        // Active or no hike — start fresh
+        const state = await startHike(guestId);
+        if (cancelled) return;
+        setRiddle(state);
+        setPhase("playing");
+      } catch {
+        // leave on idle if unreachable; user can retry
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [guestId]);
 
   async function handleStart() {
     if (!guestId) return;
@@ -188,24 +218,19 @@ export function MountainPanel() {
         </div>
       )}
 
-      {/* Idle — start screen */}
+      {/* Idle — shown only when not logged in or while auto-starting */}
       {phase === "idle" && (
         <div className="rounded-xl border border-zinc-700 bg-zinc-900/40 p-5 flex flex-col items-center gap-4 text-center">
           <div className="text-5xl">🏔️</div>
-          <p className="text-zinc-300 text-sm leading-relaxed">
-            Five riddles stand between you and the summit. Solve them to earn your place on the leaderboard.
-            The Parrot Oracle will guide you — and offer a hint when you're stuck.
-          </p>
           {guestId ? (
-            <button
-              onClick={handleStart}
-              disabled={loading}
-              className="px-5 py-2 rounded-lg bg-lime-600 hover:bg-lime-500 text-white font-medium text-sm transition-colors disabled:opacity-50"
-            >
-              {loading ? "Preparing the trail…" : "Begin the ascent"}
-            </button>
+            <p className="text-zinc-400 text-sm animate-pulse">Preparing the trail…</p>
           ) : (
-            <p className="text-zinc-500 text-xs">Sign in as a guest to begin the climb.</p>
+            <>
+              <p className="text-zinc-300 text-sm leading-relaxed">
+                Five riddles stand between you and the summit. Solve them to earn your place on the leaderboard.
+              </p>
+              <p className="text-zinc-500 text-xs">Sign in as a guest to begin the climb.</p>
+            </>
           )}
         </div>
       )}
