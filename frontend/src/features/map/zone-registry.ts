@@ -127,10 +127,10 @@ export const ZONE_REGISTRY: Record<ZoneId, ZoneDefinition> = {
       "Observe mountain summit events and leaderboard.",
     icon: IconMountain,
     channel: ChannelId.Mountain,
-    position: { x: 2740, y: 576 },
+    position: { x: 2710, y: 610 },
     accent: "#a3e635",
     markerSrc: mountainZoneArt,
-    markerScale: 1.4,
+    markerScale: 1.6,
   },
 };
 
