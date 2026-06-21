@@ -130,7 +130,7 @@ export const ZONE_REGISTRY: Record<ZoneId, ZoneDefinition> = {
     position: { x: 2740, y: 576 },
     accent: "#a3e635",
     markerSrc: mountainZoneArt,
-    markerScale: 2,
+    markerScale: 1.4,
   },
 };
 
