@@ -234,8 +234,8 @@ export function MountainPanel() {
 
           {/* Oracle riddle */}
           <div className="rounded-lg bg-zinc-800/60 border border-zinc-700 px-4 py-3">
-            <p className="text-[11px] uppercase tracking-widest text-lime-400 mb-2 font-semibold">The Oracle speaks</p>
-            <p className="text-white text-sm leading-relaxed font-medium">"{riddle.riddle}"</p>
+            <p className="text-[11px] uppercase tracking-widest text-lime-400 mb-2 font-semibold">Question {riddle.step + 1}</p>
+            <p className="text-white text-sm leading-relaxed font-medium">{riddle.riddle}</p>
           </div>
 
           {/* Wrong attempt dots */}
@@ -305,16 +305,16 @@ export function MountainPanel() {
           <div className="flex flex-col items-end gap-1">
             {showHint && (
               <div className="w-full rounded-lg bg-amber-950/70 border border-amber-600/50 px-3 py-2.5 text-sm text-amber-100">
-                <span className="font-semibold text-amber-300">Oracle hint: </span>{riddle.hint}
+                <span className="font-semibold text-amber-300">Hint: </span>{riddle.hint}
               </div>
             )}
             <button
               onClick={() => setShowHint(v => !v)}
-              title="Ask the Oracle for a hint"
+              title="Get a hint"
               className="relative flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-950/50 border border-amber-700/50 hover:border-amber-500 text-amber-300 text-xs font-medium transition-colors"
             >
-              <span className="text-sm">🦜</span>
-              <span>{showHint ? "Hide hint" : "Ask the Oracle"}</span>
+              <span className="text-sm">💡</span>
+              <span>{showHint ? "Hide hint" : "Show hint"}</span>
               {!showHint && (
                 <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-amber-500 text-black text-[8px] font-bold flex items-center justify-center animate-bounce">!</span>
               )}
@@ -329,12 +329,12 @@ export function MountainPanel() {
           <div className="text-5xl">{loading ? "⏳" : "🏔️"}</div>
           {guestId ? (
             <p className="text-zinc-300 text-sm animate-pulse">
-              {loading ? "The Oracle is preparing your trail…" : "Ready to climb"}
+              {loading ? "Generating your questions…" : "Ready to climb"}
             </p>
           ) : (
             <>
               <p className="text-zinc-200 text-sm leading-relaxed">
-                Five riddles stand between you and the summit.
+                Five university math questions stand between you and the summit.
               </p>
               <p className="text-zinc-400 text-xs">Sign in as a guest to begin the climb.</p>
             </>

@@ -6,26 +6,22 @@ from config import settings
 logger = logging.getLogger(__name__)
 
 PROMPT = """\
-You are the Mountain Oracle at Purrlington, a fictional tropical island resort.
-Generate exactly 5 riddle-style challenges for a mountain hike game.
-Each riddle describes one distinct feature of the resort in cryptic, first-person voice.
-Cover exactly these five features (one riddle each, in any order):
-  Airport (passport control, arrivals queue)
-  Hotel (room reservations, check-in)
-  Beach (activities, limited spots, sun)
-  Lighthouse / Broadcast tower (island-wide announcements, admin view)
-  Parrot AI assistant (AI guide, chat, feather icon)
+Generate exactly 5 university-level mathematics questions for a multiple-choice challenge.
+Cover a variety of topics such as: calculus (derivatives, integrals, limits), linear algebra
+(determinants, eigenvalues, matrix operations), probability & statistics, discrete mathematics
+(combinatorics, graph theory), and real analysis or differential equations.
 
 Return a JSON array of exactly 5 objects. Each object must have:
-  "text"    – the riddle body (2-3 sentences, cryptic, poetic, first-person of the thing)
-  "paths"   – array of exactly 3 answer options (5-8 words each, plausible-sounding)
-  "correct" – integer 0, 1, or 2 (index of the correct answer among the three paths)
-  "hint"    – one indirect sentence that nudges without revealing the answer
+  "text"    – the question, written clearly and precisely (include any necessary formula or expression)
+  "paths"   – array of exactly 3 answer options; each is a short mathematical expression or value
+  "correct" – integer 0, 1, or 2 (index of the correct answer)
+  "hint"    – one sentence that points toward the right method or concept without giving the answer
 
 Rules:
-- Spread the correct index: do not repeat the same index more than twice.
-- Make wrong answers plausible but clearly not the right place once you think about it.
-- Keep tone mysterious and island-warm.
+- Each question must have one unambiguously correct answer.
+- Wrong answers must be plausible (e.g. common mistakes, close values, sign errors).
+- Spread the correct index: no index may appear more than twice across the 5 questions.
+- Use LaTeX-style notation where helpful (e.g. x^2, sqrt(x), pi, e, ln(x), sum, integral).
 - Output ONLY the JSON array, no markdown fences, no extra text.
 """
 
