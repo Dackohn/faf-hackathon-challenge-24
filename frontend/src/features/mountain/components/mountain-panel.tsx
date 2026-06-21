@@ -329,12 +329,12 @@ export function MountainPanel() {
           <div className="text-5xl">{loading ? "⏳" : "🏔️"}</div>
           {guestId ? (
             <p className="text-zinc-300 text-sm animate-pulse">
-              {loading ? "Generating your questions…" : "Ready to climb"}
+              {loading ? "The ancient trials are being summoned…" : "Ready to climb"}
             </p>
           ) : (
             <>
               <p className="text-zinc-200 text-sm leading-relaxed">
-                Five university math questions stand between you and the summit.
+                Five trials of wisdom guard the summit. Prove yourself worthy.
               </p>
               <p className="text-zinc-400 text-xs">Sign in as a guest to begin the climb.</p>
             </>
