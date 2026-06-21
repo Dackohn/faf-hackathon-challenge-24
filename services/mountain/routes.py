@@ -3,6 +3,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from game import game
 from broadcast import notify_summit
+from riddle_gen import generate_riddles
 
 router = APIRouter()
 
@@ -22,8 +23,9 @@ def health():
 
 
 @router.post("/hike/start")
-def hike_start(req: StartRequest):
-    return game.start(req.guest_id)
+async def hike_start(req: StartRequest):
+    riddles = await generate_riddles()  # None → falls back to static riddles
+    return game.start(req.guest_id, riddles)
 
 
 @router.post("/hike/answer")

@@ -14,10 +14,12 @@ export interface RiddleState {
 export interface AnswerResult {
   correct: boolean;
   summited: boolean;
-  skipped?: boolean;
+  was_skipped?: boolean;
   message?: string;
   duration_seconds?: number;
   skipped_count?: number;
+  wrong_attempts?: number;
+  attempts_left?: number;
   step?: number;
   total_steps?: number;
   riddle?: string;

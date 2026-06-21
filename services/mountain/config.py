@@ -9,5 +9,11 @@ class Settings(BaseSettings):
     parrot_token: str = ""
     internal_secret: str = ""
 
+    llm_base_url: str = "https://openrouter.ai/api/v1"
+    llm_api_key: str = ""
+    llm_model: str = "meta-llama/llama-3.1-8b-instruct"
+    llm_temperature: float = 0.9
+    llm_max_tokens: int = 1500
+
 
 settings = Settings()

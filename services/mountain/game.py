@@ -48,6 +48,7 @@ MAX_WRONG_PER_RIDDLE = 3
 class HikeState:
     guest_id: str
     started_at: float
+    riddles: list = field(default_factory=list)
     step: int = 0
     wrong_this_step: int = 0
     skipped: int = 0
@@ -68,9 +69,13 @@ class MountainGame:
         self._hikes: dict[str, HikeState] = {}
         self._leaderboard: list[LeaderboardEntry] = []
 
-    def start(self, guest_id: str) -> dict:
+    def start(self, guest_id: str, riddles: list | None = None) -> dict:
         with self._lock:
-            state = HikeState(guest_id=guest_id, started_at=time.time())
+            state = HikeState(
+                guest_id=guest_id,
+                started_at=time.time(),
+                riddles=riddles if riddles else RIDDLES,
+            )
             self._hikes[guest_id] = state
         return self._riddle_response(state)
 
@@ -82,11 +87,11 @@ class MountainGame:
             if state.summited:
                 return {"error": "Already summited!", "summited": True}
 
-            riddle = RIDDLES[state.step]
+            riddle = state.riddles[state.step]
             if choice == riddle["correct"]:
                 state.step += 1
                 state.wrong_this_step = 0
-                if state.step >= len(RIDDLES):
+                if state.step >= len(state.riddles):
                     state.summited = True
                     state.summited_at = time.time()
                     duration = state.summited_at - state.started_at
@@ -109,7 +114,7 @@ class MountainGame:
                     state.skipped += 1
                     state.step += 1
                     state.wrong_this_step = 0
-                    if state.step >= len(RIDDLES):
+                    if state.step >= len(state.riddles):
                         state.summited = True
                         state.summited_at = time.time()
                         duration = state.summited_at - state.started_at
@@ -135,9 +140,10 @@ class MountainGame:
                     }
                 return {
                     "correct": False,
-                    "skipped": False,
+                    "was_skipped": False,
                     "summited": False,
                     "wrong_attempts": state.wrong_this_step,
+                    "attempts_left": MAX_WRONG_PER_RIDDLE - state.wrong_this_step,
                     "message": "The path crumbles underfoot. Try another route.",
                     **self._riddle_response(state),
                 }
@@ -168,10 +174,10 @@ class MountainGame:
             ]
 
     def _riddle_response(self, state: HikeState) -> dict:
-        riddle = RIDDLES[state.step]
+        riddle = state.riddles[state.step]
         return {
             "step": state.step,
-            "total_steps": len(RIDDLES),
+            "total_steps": len(state.riddles),
             "riddle": riddle["text"],
             "paths": riddle["paths"],
             "hint": riddle["hint"],
