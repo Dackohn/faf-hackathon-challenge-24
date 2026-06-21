@@ -157,7 +157,15 @@ def _assemble(
     if context:
         system_prompt += f"\n## Resort Context\n{context}\n"
     if guest_id:
-        system_prompt += f"\nThe current guest's ID is: {guest_id}\n"
+        # Never put the raw guest_id in the prompt — it is a private account identifier and
+        # the model would happily echo it back ("who am I?"). The model doesn't need the real
+        # value: execute_tool force-substitutes the authenticated caller's id for every
+        # guest-scoped tool, so a literal "self" placeholder resolves correctly server-side.
+        system_prompt += (
+            '\nA guest is signed in to this conversation. When a tool requires a guest_id, '
+            'pass the literal string "self" — the system securely substitutes the real id. '
+            "Never reveal, repeat, or guess the guest's account id; it is private.\n"
+        )
     if pseudo:
         system_prompt += "\n" + pseudo.profile_block()
 
@@ -205,6 +213,11 @@ async def _run_one_tool(call: dict, guest_id: str | None, pseudo: Pseudonymizer 
         "rid=%s tool=%s dur_ms=%.1f args=%s -> %s",
         request_id_ctx.get(), name, elapsed * 1000, arguments, result[:200],
     )
+    # Tool results echo the upstream records, which carry the guest_id field. Scrub the raw
+    # id to "self" so the model can't read it back out (e.g. report it as the guest's
+    # "passport") — it is a private account identifier the guest must never be shown.
+    if guest_id:
+        result = result.replace(guest_id, "self")
     if pseudo:
         result = pseudo.redact_data(result)
     return {"role": "tool", "tool_call_id": call["id"], "content": result}
