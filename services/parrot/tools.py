@@ -1,5 +1,8 @@
 import json
 import httpx
+# MOUNTAIN_TOOL_SCHEMAS are mixed into GUEST_TOOL_SCHEMAS so they are only
+# available when a guest_id is present — the hike and leaderboard tools need it.
+
 from services import (
     get_airport_stats,
     get_airport_queue_status,
@@ -10,6 +13,9 @@ from services import (
     get_guest_clearance_eta,
     get_room_availability,
     get_beach_activities,
+    get_mountain_leaderboard,
+    start_mountain_hike,
+    answer_mountain_riddle,
 )
 
 TOOL_SCHEMAS = [
@@ -51,6 +57,54 @@ TOOL_SCHEMAS = [
             "name": "get_beach_activities",
             "description": "Get all beach activities with their current remaining spots and capacity. Beach spots are capacity-based with no schedule, so this gives current availability — it cannot tell you WHEN a full activity will free a spot (that only happens if someone cancels).",
             "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_mountain_leaderboard",
+            "description": "Get the mountain summit leaderboard — the fastest guests who completed the trail challenge.",
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+]
+
+MOUNTAIN_TOOL_SCHEMAS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "get_mountain_leaderboard",
+            "description": "Get the mountain summit leaderboard — fastest guests who completed the trail challenge.",
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "start_mountain_hike",
+            "description": "Start the mountain trail challenge for the current guest. Returns the first riddle and three path choices (0, 1, 2). Call this when the guest wants to climb the mountain or play the trail game.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "guest_id": {"type": "string", "description": "The guest ID"},
+                },
+                "required": ["guest_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "answer_mountain_riddle",
+            "description": "Submit the guest's chosen path (0, 1, or 2) for the current mountain riddle. Call this after the guest picks a path.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "guest_id": {"type": "string", "description": "The guest ID"},
+                    "choice": {"type": "integer", "description": "The path index chosen: 0, 1, or 2"},
+                },
+                "required": ["guest_id", "choice"],
+            },
         },
     },
 ]
@@ -120,17 +174,20 @@ _DISPATCH = {
     "get_hotel_rooms": lambda **_: get_hotel_rooms(),
     "get_room_availability": lambda **_: get_room_availability(),
     "get_beach_activities": lambda **_: get_beach_activities(),
+    "get_mountain_leaderboard": lambda **_: get_mountain_leaderboard(),
     "get_guest_arrival_status": lambda *, guest_id, **_: get_guest_arrival_status(guest_id),
     "get_guest_reservation": lambda *, guest_id, **_: get_guest_reservation(guest_id),
     "get_guest_journey_status": lambda *, guest_id, **_: get_guest_journey_status(guest_id),
     "get_guest_clearance_eta": lambda *, guest_id, **_: get_guest_clearance_eta(guest_id),
+    "start_mountain_hike": lambda *, guest_id, **_: start_mountain_hike(guest_id),
+    "answer_mountain_riddle": lambda *, guest_id, choice, **_: answer_mountain_riddle(guest_id, choice),
 }
 
 # Tools that expose a single guest's private data. Their guest_id must be the
 # authenticated caller's, never a value the model picked.
 GUEST_SCOPED_TOOLS = frozenset(
     {"get_guest_arrival_status", "get_guest_reservation", "get_guest_journey_status",
-     "get_guest_clearance_eta"}
+     "get_guest_clearance_eta", "start_mountain_hike", "answer_mountain_riddle"}
 )
 
 async def execute_tool(name: str, arguments: dict, allowed_guest_id: str | None) -> str:

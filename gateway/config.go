@@ -17,6 +17,7 @@ type Config struct {
 	BroadcastServiceURL string
 	ParrotServiceURL    string
 	DiningServiceURL    string
+	MountainServiceURL  string
 
 	// Service pools — each *_SERVICE_URL may be a comma-separated list of instances.
 	// When a pool has more than one URL the gateway round-robins across it.
@@ -26,6 +27,7 @@ type Config struct {
 	BroadcastServicePool []string
 	ParrotServicePool    []string
 	DiningServicePool    []string
+	MountainServicePool  []string
 
 	CORSOrigins          []string
 	InternalSecret       string
@@ -44,6 +46,7 @@ func LoadConfig() Config {
 	broadcast := splitEnv("BROADCAST_SERVICE_URL", "")
 	parrot := splitEnv("PARROT_SERVICE_URL", "")
 	dining := splitEnv("DINING_SERVICE_URL", "")
+	mountain := splitEnv("MOUNTAIN_SERVICE_URL", "")
 
 	return Config{
 		Port: getEnv("PORT", "8000"),
@@ -54,6 +57,7 @@ func LoadConfig() Config {
 		BroadcastServiceURL: firstURL(broadcast),
 		ParrotServiceURL:    firstURL(parrot),
 		DiningServiceURL:    firstURL(dining),
+		MountainServiceURL:  firstURL(mountain),
 
 		AirportServicePool:   airport,
 		HotelServicePool:     hotel,
@@ -61,6 +65,7 @@ func LoadConfig() Config {
 		BroadcastServicePool: broadcast,
 		ParrotServicePool:    parrot,
 		DiningServicePool:    dining,
+		MountainServicePool:  mountain,
 
 		CORSOrigins:          splitEnv("CORS_ALLOWED_ORIGINS", ""),
 		InternalSecret:       getEnv("INTERNAL_SECRET", ""),

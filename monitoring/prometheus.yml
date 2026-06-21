@@ -26,3 +26,7 @@ scrape_configs:
   - job_name: parrot
     static_configs:
       - targets: ["parrot:3003", "parrot-b:3003"]
+
+  - job_name: mountain
+    static_configs:
+      - targets: ["mountain:3005"]
