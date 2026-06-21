@@ -30,7 +30,12 @@ async def generate_riddles() -> list[dict] | None:
     if not settings.llm_api_key:
         logger.info("No LLM API key — using static riddles")
         return None
-    client = AsyncOpenAI(base_url=settings.llm_base_url, api_key=settings.llm_api_key)
+    client = AsyncOpenAI(
+        base_url=settings.llm_base_url,
+        api_key=settings.llm_api_key,
+        max_retries=0,
+        timeout=10.0,
+    )
     try:
         response = await client.chat.completions.create(
             model=settings.llm_model,
