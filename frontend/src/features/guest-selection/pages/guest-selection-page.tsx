@@ -17,13 +17,13 @@ export function GuestSelectionPage() {
 
   const [flipped, setFlipped] = useState(false);
 
-  function handleSelectGuest(guest: GuestProfile) {
-    selectGuest(guest);
+  async function handleSelectGuest(guest: GuestProfile) {
+    await selectGuest(guest);
     navigate("/map");
   }
 
-  function handleAdminLogin() {
-    loginAdmin("Admin Observer");
+  async function handleAdminLogin(passcode: string) {
+    await loginAdmin(passcode, "Admin Observer");
     navigate("/map");
   }
 

@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
+import { loginAdmin as loginAdminRequest, loginGuest } from "@/lib/auth-client";
 import type { GuestProfile } from "@/types/guest";
 
 export type GuestSession = {
@@ -18,14 +19,16 @@ export type AppSession = GuestSession | AdminSession;
 interface PersistedSessionState {
   session?: AppSession | null;
   guest?: GuestProfile | null;
+  token?: string | null;
 }
 
 interface SessionState {
   session: AppSession | null;
   guest: GuestProfile | null;
   isAdmin: boolean;
-  selectGuest: (guest: GuestProfile) => void;
-  loginAdmin: (displayName?: string) => void;
+  token: string | null;
+  selectGuest: (guest: GuestProfile) => Promise<void>;
+  loginAdmin: (passcode: string, displayName?: string) => Promise<void>;
   clearSession: () => void;
   clearGuest: () => void;
 }
@@ -34,23 +37,26 @@ const EMPTY_SESSION_STATE = {
   session: null,
   guest: null,
   isAdmin: false,
-} satisfies Pick<SessionState, "session" | "guest" | "isAdmin">;
+  token: null,
+} satisfies Pick<SessionState, "session" | "guest" | "isAdmin" | "token">;
 
-function guestSessionState(guest: GuestProfile) {
+function guestSessionState(guest: GuestProfile, token: string) {
   const session: GuestSession = { role: "guest", guest };
 
   return {
     session,
     guest,
     isAdmin: false,
+    token,
   };
 }
 
-function adminSessionState(displayName: string) {
+function adminSessionState(displayName: string, token: string) {
   return {
     session: { role: "admin", displayName } satisfies AdminSession,
     guest: null,
     isAdmin: true,
+    token,
   };
 }
 
@@ -61,17 +67,19 @@ function deriveGuest(session: AppSession | null): GuestProfile | null {
 function migrateSessionState(persisted: unknown): Partial<SessionState> {
   const state = persisted as PersistedSessionState | null;
   const session = state?.session ?? null;
+  const token = state?.token ?? null;
 
   if (session) {
     return {
       session,
       guest: deriveGuest(session),
       isAdmin: session.role === "admin",
+      token,
     };
   }
 
   if (state?.guest) {
-    return guestSessionState(state.guest);
+    return { ...guestSessionState(state.guest, token ?? ""), token };
   }
 
   return EMPTY_SESSION_STATE;
@@ -82,10 +90,15 @@ export const useSessionStore = create<SessionState>()(
     (set) => ({
       ...EMPTY_SESSION_STATE,
 
-      selectGuest: (guest) => set(guestSessionState(guest)),
+      selectGuest: async (guest) => {
+        const token = await loginGuest(guest.id);
+        set(guestSessionState(guest, token));
+      },
 
-      loginAdmin: (displayName = "Admin") =>
-        set(adminSessionState(displayName)),
+      loginAdmin: async (passcode, displayName = "Admin") => {
+        const token = await loginAdminRequest(passcode);
+        set(adminSessionState(displayName, token));
+      },
 
       clearSession: () => set(EMPTY_SESSION_STATE),
 
@@ -94,7 +107,7 @@ export const useSessionStore = create<SessionState>()(
     {
       name: "kikis-paradise-session",
       storage: createJSONStorage(() => sessionStorage),
-      partialize: (state) => ({ session: state.session }),
+      partialize: (state) => ({ session: state.session, token: state.token }),
       merge: (persisted, current) => ({
         ...current,
         ...migrateSessionState(persisted),
