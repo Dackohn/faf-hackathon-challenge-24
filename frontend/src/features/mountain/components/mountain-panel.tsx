@@ -10,6 +10,7 @@ import {
   type LeaderboardEntry,
 } from "../api/mountain-client";
 import kiki from "@/assets/kiki.png";
+import { kikiReact } from "@/features/kiki/kiki-store";
 
 type GamePhase = "idle" | "playing" | "summited";
 
@@ -114,6 +115,7 @@ export function MountainPanel() {
         setPhase("summited");
         setSummitData({ duration: result.duration_seconds ?? 0, skipped: result.skipped_count ?? 0 });
         fetchLeaderboard();
+        kikiReact("mountain_summited");
         return;
       }
 

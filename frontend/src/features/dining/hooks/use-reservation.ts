@@ -7,6 +7,7 @@ import {
   getReservationsByGuest,
 } from "@/features/dining/api/dining-client";
 import { DINING_KEYS } from "@/features/dining/query-keys";
+import { kikiReact } from "@/features/kiki/kiki-store";
 import { getCurrentSimulationHour } from "@/lib/simulation-time";
 import { useSessionStore } from "@/stores/session-store";
 
@@ -46,7 +47,10 @@ export function useReservation() {
         party_size: partySize,
         seating_slot: getCurrentSimulationHour(),
       }),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      kikiReact("dining_booked");
+    },
     onError: (error) => {
       toast.error(error.message);
     },
@@ -54,7 +58,10 @@ export function useReservation() {
 
   const cancelMutation = useMutation({
     mutationFn: (reservationId: string) => cancelReservation(reservationId),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      kikiReact("cancelled");
+    },
     onError: (error) => {
       toast.error(error.message);
     },

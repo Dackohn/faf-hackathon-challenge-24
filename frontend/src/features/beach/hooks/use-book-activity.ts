@@ -7,6 +7,7 @@ import {
 } from "@/features/beach/api/beach-client";
 import { useSessionStore } from "@/stores/session-store";
 import { BEACH_KEYS } from "@/features/beach/query-keys";
+import { kikiReact } from "@/features/kiki/kiki-store";
 
 export function useBookActivity() {
   const guest = useSessionStore((s) => s.guest);
@@ -28,7 +29,10 @@ export function useBookActivity() {
 
   const bookMutation = useMutation({
     mutationFn: (activityId: string) => bookActivity(activityId, guest!.id),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      kikiReact("beach_booked");
+    },
     onError: (error) => {
       toast.error(error.message);
     },
@@ -36,7 +40,10 @@ export function useBookActivity() {
 
   const cancelMutation = useMutation({
     mutationFn: (activityId: string) => cancelActivity(activityId, guest!.id),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      kikiReact("cancelled");
+    },
     onError: (error) => {
       toast.error(error.message);
     },

@@ -10,6 +10,7 @@ from schemas import (
     ConversationDetailResponse,
 )
 from history import ConversationStore
+from kiki import generate_quip, QuipRequest, QuipResponse
 from llm import chat, chat_stream
 from pii import make_pseudonymizer
 from tracing import request_id_ctx
@@ -23,6 +24,15 @@ router = APIRouter()
 @router.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@router.post("/quip", response_model=QuipResponse)
+async def quip_endpoint(req: QuipRequest, request: Request):
+    """Kiki's Hot Takes — one sarcastic cat one-liner about what the guest just did.
+    Pure flavour: always returns a line (model or static fallback), never errors out."""
+    request_id_ctx.set(request.state.request_id)
+    quip = await generate_quip(req.trigger, req.context, req.guest_name)
+    return QuipResponse(quip=quip)
 
 
 @router.post("/chat", response_model=ChatResponse)

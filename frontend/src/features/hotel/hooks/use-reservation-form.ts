@@ -10,6 +10,7 @@ import {
   formToRequest,
   type ReservationFormValues,
 } from "@/features/hotel/schemas/reservation-form-schema";
+import { kikiReact } from "@/features/kiki/kiki-store";
 import { useSessionStore } from "@/stores/session-store";
 import type { Reservation } from "@/features/hotel/types";
 import {
@@ -43,6 +44,7 @@ export function useReservationForm() {
         queryKey: [...HOTEL_KEYS.RESERVATION],
       });
       queryClient.invalidateQueries({ queryKey: [...HOTEL_KEYS.ROOMS] });
+      kikiReact("hotel_booked");
     },
     onError: (error) => {
       toast.error(error.message);

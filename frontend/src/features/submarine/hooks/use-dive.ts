@@ -7,6 +7,7 @@ import {
   getDivesByGuest,
 } from "@/features/submarine/api/submarine-client";
 import { SUBMARINE_KEYS } from "@/features/submarine/query-keys";
+import { kikiReact } from "@/features/kiki/kiki-store";
 import { getCurrentSimulationHour } from "@/lib/simulation-time";
 import { useSessionStore } from "@/stores/session-store";
 
@@ -46,7 +47,10 @@ export function useDive() {
         party_size: partySize,
         dive_slot: getCurrentSimulationHour(),
       }),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      kikiReact("submarine_dived");
+    },
     onError: (error) => {
       toast.error(error.message);
     },
@@ -54,7 +58,10 @@ export function useDive() {
 
   const cancelMutation = useMutation({
     mutationFn: (diveId: string) => cancelDive(diveId),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      kikiReact("cancelled");
+    },
     onError: (error) => {
       toast.error(error.message);
     },

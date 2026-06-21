@@ -10,6 +10,7 @@ import {
 } from "@/features/airport/schemas/arrival-form-schema";
 import { useSessionStore } from "@/stores/session-store";
 import { AIRPORT_KEYS } from "@/features/airport/query-keys";
+import { kikiReact } from "@/features/kiki/kiki-store";
 
 export function useArrivalForm() {
   const guest = useSessionStore((s) => s.guest);
@@ -26,6 +27,7 @@ export function useArrivalForm() {
       queryClient.invalidateQueries({
         queryKey: [...AIRPORT_KEYS.ARRIVAL, guest?.id],
       });
+      kikiReact("airport_boarded");
     },
     onError: (error) => {
       toast.error(error.message);
