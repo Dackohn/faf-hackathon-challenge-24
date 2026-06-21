@@ -88,6 +88,13 @@ func main() {
 
 	mountServiceRoutes(r, "/api/broadcast", cfg.BroadcastServicePool, cfg, nil, AccessPublic)
 
+	mountServiceRoutes(r, "/api/mountain", cfg.MountainServicePool, cfg, []RouteRule{
+		{Method: "GET", Pattern: "/hike/leaderboard", Access: AccessPublic},
+		{Method: "POST", Pattern: "/hike/start", Access: AccessGuest, GuestInBody: true},
+		{Method: "POST", Pattern: "/hike/answer", Access: AccessGuest, GuestInBody: true},
+		{Method: "GET", Pattern: "/hike/status/{guest_id}", Access: AccessGuest, GuestParam: "guest_id"},
+	}, AccessGuest)
+
 	// Prometheus query API — proxied for the admin metrics UI.
 	if cfg.PrometheusServiceURL != "" {
 		r.Route("/api/prometheus", func(sr chi.Router) {
