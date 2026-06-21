@@ -202,9 +202,8 @@ services:
 
   # ── Observability ─────────────────────────────────────────────────────────────
   prometheus:
-    image: prom/prometheus:v2.51.2
+    build: ./monitoring
     volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
