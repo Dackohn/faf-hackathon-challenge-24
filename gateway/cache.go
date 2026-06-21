@@ -15,8 +15,8 @@ type cacheEntry struct {
 	expires time.Time
 }
 
-// inflightCall is a backend fetch in progress for one cache key. The leader fills in the
-// result and closes done; waiters for the same key block on done and share the result.
+// inflightCall is a single backend fetch in progress for one cache key. The leader fills in
+// the result and closes done; waiters for the same key block on done and share the result.
 type inflightCall struct {
 	done      chan struct{}
 	status    int
@@ -30,8 +30,8 @@ type responseCache struct {
 	entries map[string]cacheEntry
 	ttl     time.Duration
 
-	// callsMu guards calls only; it is held just for map lookups/inserts, never across a
-	// backend fetch, so coalescing one URL never blocks requests for a different URL.
+	// callsMu guards calls only, held just for map lookup/insert — never across a backend
+	// fetch — so coalescing one URL never blocks requests for any other URL.
 	callsMu sync.Mutex
 	calls   map[string]*inflightCall
 }
@@ -46,8 +46,8 @@ func newResponseCache(ttl time.Duration) *responseCache {
 	return c
 }
 
-// beginCall registers an in-flight fetch for key. The first caller becomes the leader
-// (leader=true); concurrent callers for the same key get the existing call to wait on.
+// beginCall registers an in-flight fetch for key. The first caller is the leader
+// (leader=true); concurrent callers for the same key receive the existing call to wait on.
 func (c *responseCache) beginCall(key string) (leader bool, call *inflightCall) {
 	c.callsMu.Lock()
 	defer c.callsMu.Unlock()
@@ -59,11 +59,13 @@ func (c *responseCache) beginCall(key string) (leader bool, call *inflightCall) 
 	return true, call
 }
 
-// endCall removes the in-flight entry and wakes every waiter. The leader fills call's
-// result fields before calling this, so the close happens-after those writes are visible.
+// endCall removes the in-flight entry (if still this call) and wakes its waiters. The leader
+// fills call's result fields before calling this, so the close happens-after those writes.
 func (c *responseCache) endCall(key string, call *inflightCall) {
 	c.callsMu.Lock()
-	delete(c.calls, key)
+	if c.calls[key] == call {
+		delete(c.calls, key)
+	}
 	c.callsMu.Unlock()
 	close(call.done)
 }
@@ -120,6 +122,10 @@ type cacheCapture struct {
 	status    int
 	cacheable bool
 	decided   bool
+	// onDecided fires once, the moment cacheability is known (first WriteHeader). The
+	// coalescer uses it to release waiters early when a response is streaming/non-200,
+	// so concurrent SSE subscribers never block on a leader's stream that won't end.
+	onDecided func(cacheable bool)
 }
 
 func (c *cacheCapture) WriteHeader(code int) {
@@ -128,6 +134,9 @@ func (c *cacheCapture) WriteHeader(code int) {
 		ct := c.Header().Get("Content-Type")
 		c.cacheable = code == http.StatusOK && !strings.HasPrefix(ct, "text/event-stream")
 		c.decided = true
+		if c.onDecided != nil {
+			c.onDecided(c.cacheable)
+		}
 	}
 	c.ResponseWriter.WriteHeader(code)
 }
@@ -160,12 +169,16 @@ func writeEntry(w http.ResponseWriter, status int, header http.Header, body []by
 	w.Write(body)
 }
 
-// CacheMiddleware caches safe responses (GET/HEAD, status 200, non-streaming)
-// for ttl. No-op when ttl <= 0.
+// CacheMiddleware caches safe responses (GET/HEAD, status 200, non-streaming) for ttl.
+// No-op when ttl <= 0.
 //
-// On a miss, requests for the same URL are coalesced: one request (the leader) performs the
-// backend fetch while the rest wait and share its result, so the backend is hit once rather
-// than once per request. Requests for different URLs run fully in parallel.
+// On a miss it also coalesces concurrent requests for the same URL: one request (the leader)
+// performs the backend fetch while the rest wait and share its result, so the backend is hit
+// once rather than once per request. Requests for different URLs run fully in parallel (the
+// per-key lock is held only for map bookkeeping, never across a fetch). A response that turns
+// out to be streaming (SSE) or non-200 is NOT coalesced: waiters are released the instant the
+// leader learns it is non-cacheable, so concurrent SSE subscribers each get their own stream
+// instead of blocking on a leader stream that never ends.
 func CacheMiddleware(ttl time.Duration) func(http.Handler) http.Handler {
 	if ttl <= 0 {
 		return func(next http.Handler) http.Handler { return next }
@@ -188,7 +201,7 @@ func CacheMiddleware(ttl time.Duration) func(http.Handler) http.Handler {
 				return
 			}
 
-			// Coalesce concurrent misses for the same key onto a single backend fetch.
+			// Coalesce concurrent misses for the same key onto one backend fetch.
 			leader, call := cache.beginCall(key)
 			if !leader {
 				<-call.done
@@ -197,15 +210,19 @@ func CacheMiddleware(ttl time.Duration) func(http.Handler) http.Handler {
 					writeEntry(w, call.status, call.header, call.body)
 					return
 				}
-				// The leader's response can't be shared (streaming/non-200), so this
-				// request makes its own fetch. (Different keys are never affected.)
+				// Leader's response can't be shared (streaming/non-200); fetch our own.
+				// Different keys are never affected by this.
 				cc := &cacheCapture{ResponseWriter: w}
 				next.ServeHTTP(cc, r)
 				return
 			}
 
-			// Leader: always release waiters, even on a panic in the backend handler.
-			defer cache.endCall(key, call)
+			// Leader. release() wakes waiters exactly once: early if the response is
+			// non-cacheable (so SSE waiters don't block), otherwise after the result is
+			// recorded. defer is the safety net for the cacheable path and panics.
+			var once sync.Once
+			release := func() { once.Do(func() { cache.endCall(key, call) }) }
+			defer release()
 
 			// Another leader may have populated the cache between our get() and beginCall.
 			if e, ok := cache.get(key); ok {
@@ -215,15 +232,21 @@ func CacheMiddleware(ttl time.Duration) func(http.Handler) http.Handler {
 			}
 
 			cc := &cacheCapture{ResponseWriter: w}
+			
+			cc.onDecided = func(cacheable bool) {
+				if !cacheable {
+					call.cacheable = false
+					release()
+				}
+			}
 			next.ServeHTTP(cc, r)
 
-			// Publish the result for any waiters (fields set before endCall closes done).
-			call.status = cc.status
-			call.header = w.Header().Clone()
-			call.body = cc.buf.Bytes()
-			call.cacheable = cc.cacheable
-
 			if cc.cacheable {
+				// Publish the result for waiters (fields set before release closes done).
+				call.status = cc.status
+				call.header = w.Header().Clone()
+				call.body = cc.buf.Bytes()
+				call.cacheable = true
 				cache.set(key, cacheEntry{
 					status: cc.status,
 					header: w.Header().Clone(),
