@@ -9,6 +9,7 @@ import {
   type RiddleState,
   type LeaderboardEntry,
 } from "../api/mountain-client";
+import kiki from "@/assets/kiki.png";
 
 type GamePhase = "idle" | "playing" | "summited";
 
@@ -180,6 +181,9 @@ export function MountainPanel() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
+          <span className="w-7 h-7 rounded-full bg-gradient-to-b from-zinc-100 to-zinc-300 flex items-center justify-center overflow-hidden ring-1 ring-lime-700/50 shrink-0">
+            <img src={kiki} alt="Kiki" className="w-6 h-6 object-contain" />
+          </span>
           <IconMountain size={22} className="text-lime-400" />
           <h2 className="text-base font-semibold">Mountain Trail</h2>
         </div>
@@ -326,7 +330,14 @@ export function MountainPanel() {
       {/* Idle */}
       {phase === "idle" && (
         <div className="rounded-xl border border-zinc-800 bg-zinc-950/90 p-6 flex flex-col items-center gap-3 text-center">
-          <div className="text-5xl">{loading ? "⏳" : "🏔️"}</div>
+          <div className="relative w-24 h-24 rounded-full bg-gradient-to-b from-zinc-100 to-zinc-300 flex items-center justify-center overflow-hidden shadow-lg ring-2 ring-lime-700/40">
+            <img
+              src={kiki}
+              alt="Kiki, your trail companion"
+              className={`w-20 h-20 object-contain ${loading ? "animate-bounce" : ""}`}
+            />
+            <span className="absolute -bottom-0.5 right-1 text-xl drop-shadow">{loading ? "⏳" : "🏔️"}</span>
+          </div>
           {guestId ? (
             <p className="text-zinc-400 text-sm animate-pulse">
               {loading ? "The ancient trials are being summoned…" : "Ready to climb"}
