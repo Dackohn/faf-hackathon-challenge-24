@@ -31,6 +31,10 @@ type Config struct {
 	InternalSecret       string
 	PrometheusServiceURL string
 
+	JWTSecret     string        // JWT_SECRET — falls back to INTERNAL_SECRET
+	JWTTTL        time.Duration // JWT_TTL — token lifetime
+	AdminPasscode string        // ADMIN_PASSCODE — validated against POST /auth/admin
+
 	// Optional cache and rate-limit settings. All disabled by their zero value.
 	CacheTTL           time.Duration // GATEWAY_CACHE_TTL — response cache TTL (0 = off)
 	RateLimitPerWindow int           // GATEWAY_RATE_LIMIT — requests per window per client (0 = off)
@@ -65,6 +69,10 @@ func LoadConfig() Config {
 		CORSOrigins:          splitEnv("CORS_ALLOWED_ORIGINS", ""),
 		InternalSecret:       getEnv("INTERNAL_SECRET", ""),
 		PrometheusServiceURL: getEnv("PROMETHEUS_SERVICE_URL", "http://localhost:9090"),
+
+		JWTSecret:     getEnv("JWT_SECRET", getEnv("INTERNAL_SECRET", "")),
+		JWTTTL:        getDurationEnv("JWT_TTL", 12*time.Hour),
+		AdminPasscode: getEnv("ADMIN_PASSCODE", ""),
 
 		CacheTTL:           getDurationEnv("GATEWAY_CACHE_TTL", 0),
 		RateLimitPerWindow: getIntEnv("GATEWAY_RATE_LIMIT", 0),

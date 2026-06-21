@@ -3,7 +3,6 @@ import { IconShieldLock } from "@tabler/icons-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
-import { env } from "@/config/env";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,10 +16,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 interface AdminLoginCardProps {
-  onLogin: () => void;
+  onLogin: (passcode: string) => Promise<void>;
 }
-
-const ADMIN_PASSCODE = env.adminPasscode;
 
 const AdminLoginSchema = z.object({
   passcode: z.string().trim().min(1, "Enter the admin passcode."),
@@ -34,22 +31,14 @@ export function AdminLoginCard({ onLogin }: AdminLoginCardProps) {
     defaultValues: { passcode: "" },
   });
 
-  function handleSubmit(values: AdminLoginValues) {
-    if (!ADMIN_PASSCODE) {
-      form.setError("passcode", {
-        message: "Admin login is not configured for this environment.",
-      });
-      return;
-    }
-
-    if (values.passcode !== ADMIN_PASSCODE) {
+  async function handleSubmit(values: AdminLoginValues) {
+    try {
+      await onLogin(values.passcode);
+    } catch {
       form.setError("passcode", {
         message: "That admin passcode does not look right.",
       });
-      return;
     }
-
-    onLogin();
   }
 
   const error = form.formState.errors.passcode?.message;
@@ -111,6 +100,7 @@ export function AdminLoginCard({ onLogin }: AdminLoginCardProps) {
           className="w-full"
           type="submit"
           form="admin-login-form"
+          disabled={form.formState.isSubmitting}
         >
           Enter as admin
         </Button>
