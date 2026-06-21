@@ -19,4 +19,5 @@ export enum ZoneId {
   Parrot = "parrot",
   Broadcast = "broadcast",
   Dining = "dining",
+  Mountain = "mountain",
 }

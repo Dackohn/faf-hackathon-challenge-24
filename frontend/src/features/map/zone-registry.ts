@@ -6,6 +6,7 @@ import {
   IconFeather,
   IconBuildingLighthouse,
   IconToolsKitchen2,
+  IconMountain,
 } from "@tabler/icons-react";
 import airportZoneArt from "@/assets/zones/airport.svg";
 import beachZoneArt from "@/assets/zones/beach.svg";
@@ -114,6 +115,20 @@ export const ZONE_REGISTRY: Record<ZoneId, ZoneDefinition> = {
     position: { x: 1980, y: 1200 },
     accent: "#f97316",
     markerSrc: diningZoneArt,
+    markerScale: 1,
+  },
+  [ZoneId.Mountain]: {
+    id: ZoneId.Mountain,
+    label: "Mountain",
+    description:
+      "The Oracle of the summit awaits. Solve five riddles about the island to reach the top — ask the Parrot for a hint if you get stuck.",
+    adminDescription:
+      "Observe mountain summit events and leaderboard.",
+    icon: IconMountain,
+    channel: ChannelId.Mountain,
+    position: { x: 1100, y: 480 },
+    accent: "#a3e635",
+    markerSrc: "",
     markerScale: 1,
   },
 };

@@ -7,6 +7,7 @@ export enum ChannelId {
   Parrot = "parrot",
   Broadcast = "broadcast",
   ResortWide = "resort-wide",
+  Mountain = "mountain",
 }
 
 export enum EventType {
@@ -24,6 +25,7 @@ export enum EventType {
 
   CROWD_UPDATE = "crowd.update",
   PARROT_CURSED = "public.cursed",
+  MOUNTAIN_SUMMIT = "mountain.summit",
 }
 
 export type CrowdLevel = "calm" | "moderate" | "busy" | "unknown";

@@ -83,6 +83,35 @@ async def get_guest_reservation(guest_id: str) -> str:
     return json.dumps(r.json())
 
 
+async def get_mountain_leaderboard() -> str:
+    """Top summit times on the mountain trail."""
+    r = await _get_client().get(f"{settings.mountain_service_url}/hike/leaderboard", headers=_hdrs())
+    r.raise_for_status()
+    return json.dumps(r.json())
+
+
+async def start_mountain_hike(guest_id: str) -> str:
+    """Start a mountain hike for the guest, returns the first riddle and 3 path choices."""
+    r = await _get_client().post(
+        f"{settings.mountain_service_url}/hike/start",
+        json={"guest_id": guest_id},
+        headers=_hdrs(),
+    )
+    r.raise_for_status()
+    return json.dumps(r.json())
+
+
+async def answer_mountain_riddle(guest_id: str, choice: int) -> str:
+    """Submit the guest's path choice (0, 1 or 2) for the current mountain riddle."""
+    r = await _get_client().post(
+        f"{settings.mountain_service_url}/hike/answer",
+        json={"guest_id": guest_id, "choice": choice},
+        headers=_hdrs(),
+    )
+    r.raise_for_status()
+    return json.dumps(r.json())
+
+
 async def get_guest_journey_status(guest_id: str) -> str:
     """Combined arrival + reservation snapshot in one call (the two legs run concurrently).
 

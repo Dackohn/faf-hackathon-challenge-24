@@ -96,18 +96,20 @@ export function ZoneIndicator({
         className="pointer-events-none flex h-full w-full items-center justify-center overflow-visible"
         style={{ transform: `scale(${markerScale})` }}
       >
-        <img
-          src={markerSrc}
-          alt=""
-          aria-hidden="true"
-          className={cn(
-            "zone-marker-asset h-full w-full object-contain select-none",
-            locked && "is-locked",
-            isActive && "is-active"
-          )}
-          draggable={false}
-          style={{ "--zone-accent": accent } as React.CSSProperties}
-        />
+        {markerSrc && (
+          <img
+            src={markerSrc}
+            alt=""
+            aria-hidden="true"
+            className={cn(
+              "zone-marker-asset h-full w-full object-contain select-none",
+              locked && "is-locked",
+              isActive && "is-active"
+            )}
+            draggable={false}
+            style={{ "--zone-accent": accent } as React.CSSProperties}
+          />
+        )}
       </div>
     </div>
   );

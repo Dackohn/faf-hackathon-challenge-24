@@ -8,6 +8,7 @@ export enum ChannelId {
   Broadcast = "broadcast",
   ResortWide = "resort-wide",
   Dining = "dining",
+  Mountain = "mountain",
 }
 
 export type ConnectionStatus = "connected" | "dropped" | "reconnecting";
