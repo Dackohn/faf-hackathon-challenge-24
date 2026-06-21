@@ -6,6 +6,7 @@ import { ParrotPanel } from "@/features/parrot/components/parrot-panel";
 import { BroadcastPanel } from "@/features/broadcast/components/broadcast-panel";
 import { DiningPanel } from "@/features/dining/components/dining-panel";
 import { MountainPanel } from "@/features/mountain/components/mountain-panel";
+import { SubmarinePanel } from "@/features/submarine/components/submarine-panel";
 import { ZoneId } from "@/features/map/constants";
 
 interface ZonePanelProps {
@@ -30,6 +31,8 @@ function ZonePanelContent({ zoneId }: { zoneId: ZoneId }) {
       return <DiningPanel />;
     case ZoneId.Mountain:
       return <MountainPanel />;
+    case ZoneId.Submarine:
+      return <SubmarinePanel />;
   }
 }
 

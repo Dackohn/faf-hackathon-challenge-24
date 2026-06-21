@@ -95,6 +95,14 @@ func main() {
 		{Method: "GET", Pattern: "/hike/status/{guest_id}", Access: AccessGuest, GuestParam: "guest_id"},
 	}, AccessGuest)
 
+	mountServiceRoutes(r, "/api/submarine", cfg.SubmarineServicePool, cfg, []RouteRule{
+		{Method: "GET", Pattern: "/submarines", Access: AccessPublic},
+		{Method: "GET", Pattern: "/submarines/{submarine_id}", Access: AccessPublic},
+		{Method: "GET", Pattern: "/submarines/{submarine_id}/availability", Access: AccessPublic},
+		{Method: "POST", Pattern: "/dives", Access: AccessGuest, GuestInBody: true},
+		{Method: "GET", Pattern: "/dives/by-guest/{guest_id}", Access: AccessGuest, GuestParam: "guest_id"},
+	}, AccessGuest)
+
 	// Prometheus query API — proxied for the admin metrics UI.
 	if cfg.PrometheusServiceURL != "" {
 		r.Route("/api/prometheus", func(sr chi.Router) {

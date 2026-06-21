@@ -7,6 +7,7 @@ import {
   IconBuildingLighthouse,
   IconToolsKitchen2,
   IconMountain,
+  IconAnchor,
 } from "@tabler/icons-react";
 import airportZoneArt from "@/assets/zones/airport.svg";
 import beachZoneArt from "@/assets/zones/beach.svg";
@@ -14,6 +15,7 @@ import hotelZoneArt from "@/assets/zones/hotel.svg";
 import lighthouseZoneArt from "@/assets/zones/lighthouse.svg";
 import parrotZoneArt from "@/assets/zones/parrot.svg";
 import diningZoneArt from "@/assets/zones/restaurant.png";
+import submarineZoneArt from "@/assets/zones/submarine.svg";
 import { ZoneId } from "@/features/map/constants";
 import { ChannelId } from "@/types/broadcast";
 
@@ -130,6 +132,23 @@ export const ZONE_REGISTRY: Record<ZoneId, ZoneDefinition> = {
     accent: "#a3e635",
     markerSrc: "",
     markerScale: 1,
+  },
+  [ZoneId.Submarine]: {
+    id: ZoneId.Submarine,
+    label: "Submarine",
+    description:
+      "Board a tourist submarine and dive into the depths off Purrlington. Pick a porthole and a departure slot — your dive-master sends a briefing of what you'll see below.",
+    adminDescription:
+      "Observe submarine dive bookings and cancellations.",
+    icon: IconAnchor,
+    channel: ChannelId.Submarine,
+    // Out in the ocean off the east coast. The island's right shoreline sits
+    // around x≈2900 at this height, so this keeps the (smaller) marker clearly
+    // in open water, clear of the mountains, the edge, and the parrot zone.
+    position: { x: 3050, y: 1120 },
+    accent: "#06b6d4",
+    markerSrc: submarineZoneArt,
+    markerScale: 0.8,
   },
 };
 
