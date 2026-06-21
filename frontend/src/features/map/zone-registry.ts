@@ -14,6 +14,7 @@ import hotelZoneArt from "@/assets/zones/hotel.svg";
 import lighthouseZoneArt from "@/assets/zones/lighthouse.svg";
 import parrotZoneArt from "@/assets/zones/parrot.svg";
 import diningZoneArt from "@/assets/zones/restaurant.png";
+import mountainZoneArt from "@/assets/zones/mountain.svg";
 import { ZoneId } from "@/features/map/constants";
 import { ChannelId } from "@/types/broadcast";
 
@@ -128,8 +129,8 @@ export const ZONE_REGISTRY: Record<ZoneId, ZoneDefinition> = {
     channel: ChannelId.Mountain,
     position: { x: 1100, y: 480 },
     accent: "#a3e635",
-    markerSrc: "",
-    markerScale: 1,
+    markerSrc: mountainZoneArt,
+    markerScale: 2,
   },
 };
 
