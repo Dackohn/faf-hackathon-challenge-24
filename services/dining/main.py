@@ -7,7 +7,7 @@ from fastapi import FastAPI, Request
 
 from broadcast import close_client
 from config import settings
-from database import close_engine, create_all
+from database import close_engine, create_all, ensure_database_exists
 from routes import router
 from seed import seed_if_empty
 from tracing import request_id_ctx
@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
+        await ensure_database_exists()
         await create_all()
         await seed_if_empty()
         logger.info("Database schema ready")
